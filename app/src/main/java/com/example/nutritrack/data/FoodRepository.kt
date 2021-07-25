@@ -13,48 +13,37 @@ import java.net.URLDecoder
 
 class FoodRepository constructor(private val service: NutracheckService) {
 
-    fun fetchFoodList(query: String, page: Int): Flow<FoodResource> = flow {
-        emit(RemoteResource.Loading())
+    fun fetchFoodList(query: String, page: Int): Flow<Pair<FoodResource, Boolean>> = flow {
+        emit(Pair(RemoteResource.Loading(), true))
         delay(1000)
         emit(fetchNutracheckPage(query, page))
     }
 
-    private suspend fun fetchNutracheckPage(query: String, page: Int): FoodResource {
+    private suspend fun fetchNutracheckPage(query: String, page: Int): Pair<FoodResource, Boolean> {
         return try {
-            Timber.i("Requesting virtual page = $page")
+            Timber.i("Searching products, query = $query, page = $page")
 
-            val actualPage = page.floorDiv(2)
-            val firstHalf = page % 2 == 0
-
-            Timber.i("Requesting ${if (firstHalf) "firstHalf" else "lastHalf"} from actual page = $actualPage")
-            Timber.i("Searching products, query = $query")
-
-            val response = service.searchProducts(query, actualPage)
+            val response = service.searchProducts(query, page)
             val doc = Jsoup.parse(response)
 
             val elements = doc.getElementsByClass("calsinResultsArrow")
-            val mid = elements.size.floorDiv(2)
 
-            val data = elements.slice(
-                if (firstHalf) 0 until mid else mid until elements.size
-            ).map {
+            val data = elements.mapNotNull {
                 val rawLink = it.child(0).attr("href")
                 val splitLink = rawLink.split("/")
-                val id = splitLink[splitLink.lastIndex-1]
+                val id = splitLink[splitLink.lastIndex - 1]
                 val rawTitle = splitLink[splitLink.lastIndex]
                 val title = URLDecoder.decode(rawTitle, "utf-8")
                 extractInfo(id, title)
-            }.filterNotNull()
+            }
 
             val hasNextPage = doc.getElementsContainingOwnText("Next").isNotEmpty()
 
-            Timber.i("hasNextPage is $hasNextPage")
-
-            RemoteResource.Success(data)
+            Pair(RemoteResource.Success(data), hasNextPage)
 
         } catch (e: Exception) {
             Timber.e(e)
-            RemoteResource.Error("Error: ${e.cause} - ${e.message}")
+            Pair(RemoteResource.Error("Oh No! ${e.message}"), false)
         }
     }
 

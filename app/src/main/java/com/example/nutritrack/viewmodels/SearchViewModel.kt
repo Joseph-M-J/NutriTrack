@@ -22,25 +22,24 @@ class SearchViewModel constructor(private val repo: FoodRepository) : ViewModel(
 
     private var _previousQuery: String? = null
     private var _fetchJob: Job? = null
-    private var _page = NutracheckService.FIRST_PAGE
 
-    private var _quantity = 1.0f
     private var _loadedEntry: LogEntry? = null
 
     fun selectItem(foodItem: Int) {
-        _viewState.value = _viewState.value.copy(
-            selectedItem =
-                if (_viewState.value.selectedItem != foodItem) foodItem else -1,
-            selectedUnit = 0
-        )
-        updateDisplayStats()
+        if (_viewState.value.selectedItem != foodItem) {
+            _viewState.value = _viewState.value.copy(
+                selectedItem = foodItem,
+                selectedUnit = 0
+            )
+            updateDisplayStats(1.0f)
+        }
     }
 
     fun selectUnit(foodUnit: Int) {
         _viewState.value = _viewState.value.copy(
             selectedUnit = foodUnit
         )
-        updateDisplayStats()
+        updateDisplayStats(_viewState.value.quantity)
     }
 
     fun toggleUnitMenu() {
@@ -49,7 +48,7 @@ class SearchViewModel constructor(private val repo: FoodRepository) : ViewModel(
         )
     }
 
-    fun fetchFoodList(query: String?, force: Boolean = false) {
+    fun fetchFoodList(query: String?, page: Int, force: Boolean = false) {
         val newQuery = query ?: _previousQuery
 
         if (
@@ -61,8 +60,12 @@ class SearchViewModel constructor(private val repo: FoodRepository) : ViewModel(
             _fetchJob?.cancel()
 
             _fetchJob = viewModelScope.launch(Dispatchers.Default) {
-                repo.fetchFoodList(newQuery, _page).collect { results ->
+                repo.fetchFoodList(newQuery, page).collect { (results, hasNext) ->
                     _viewState.value = _viewState.value.copy(
+                        selectedUnit = 0,
+                        selectedItem = -1,
+                        currentPage = page,
+                        hasNextPage = hasNext,
                         searchResults = results
                     )
                 }
@@ -70,25 +73,24 @@ class SearchViewModel constructor(private val repo: FoodRepository) : ViewModel(
         }
     }
 
-    fun updateDisplayStats(quantity: Float = 1.0f) {
-        if (_viewState.value.searchResults !is RemoteResource.Success) return
+    fun updateDisplayStats(quantity: Float) {
+        val searchResults = _viewState.value.searchResults
 
-        val foodInfo = (
-            _viewState.value.searchResults
-            as RemoteResource.Success<List<FoodInfo>>
-        ).data
-        .getOrNull(_viewState.value.selectedItem) ?: return
+        if (searchResults !is RemoteResource.Success) return
+
+        val foodInfo = searchResults
+            .data.getOrNull(_viewState.value.selectedItem) ?: return
 
         val unit = _viewState.value.selectedUnit
-        _quantity = quantity
 
         _viewState.value = _viewState.value.copy(
+            quantity = quantity,
             displayStats = listOf(
                 foodInfo.kcal[unit],
                 foodInfo.protein[unit],
                 foodInfo.carbs[unit],
                 foodInfo.fat[unit]
-            ).map { x -> x * _quantity }
+            ).map { x -> x * quantity }
         )
     }
 

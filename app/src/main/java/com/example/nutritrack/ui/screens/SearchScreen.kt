@@ -27,7 +27,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -36,6 +35,7 @@ import coil.compose.ImagePainter
 import coil.compose.rememberImagePainter
 import com.example.nutritrack.R
 import com.example.nutritrack.api.NutracheckService
+import com.example.nutritrack.data.local.SearchViewState
 import com.example.nutritrack.data.local.fakeSearchData
 import com.example.nutritrack.data.remote.FoodInfo
 import com.example.nutritrack.ui.theme.NutriTrackTheme
@@ -53,16 +53,15 @@ fun SearchScreenContent(
     val state by searchViewModel.viewState.collectAsState()
 
     SearchScreenHoist(
-        searchResults = state.searchResults,
-        selectedItem = state.selectedItem,
-        selectedUnit = state.selectedUnit,
-        showUnitMenu = state.showUnitMenu,
+        state = state,
         onToggleUnitMenu = searchViewModel::toggleUnitMenu,
         onSelectItem = searchViewModel::selectItem,
-        onSearch = searchViewModel::fetchFoodList,
-        onRetrySearch = { searchViewModel.fetchFoodList(null, true) },
+        onSearch = { q, p, f ->
+            searchViewModel.fetchFoodList(
+                query = q, page = p, force = f
+            )
+        },
         onUpdateQuantity = searchViewModel::updateDisplayStats,
-        displayStats = state.displayStats,
         onUnitSelected = searchViewModel::selectUnit,
         onAddItem = onAddItem
     )
@@ -70,26 +69,25 @@ fun SearchScreenContent(
 
 @Composable
 fun SearchScreenHoist(
-    searchResults: FoodResource,
-    selectedItem: Int,
-    selectedUnit: Int,
-    showUnitMenu: Boolean,
+    state: SearchViewState,
     onToggleUnitMenu: () -> Unit,
     onSelectItem: (Int) -> Unit,
-    onSearch: (String) -> Unit,
-    onRetrySearch: () -> Unit,
+    onSearch: (String?, Int, Boolean) -> Unit,
     onUpdateQuantity: (Float) -> Unit,
-    displayStats: List<Float>,
     onUnitSelected: (Int) -> Unit,
     onAddItem: (LogEntry) -> Unit
 ) {
+    val searchResults = state.searchResults
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .padding(16.dp)
             .fillMaxSize()
     ) {
-        SearchBar(onSearch = onSearch)
+        SearchBar(onSearch = {
+            onSearch(it, NutracheckService.FIRST_PAGE, false) }
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -126,7 +124,7 @@ fun SearchScreenHoist(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         OutlinedButton(
-                            onClick = { onRetrySearch() }
+                            onClick = { onSearch(null, state.currentPage, true) }
                         ) {
                             Text("Try Again?")
                         }
@@ -135,12 +133,10 @@ fun SearchScreenHoist(
             }
             is RemoteResource.Success -> {
                 FoodList(
-                    foodList = searchResults.data,
-                    selectedItem = selectedItem,
-                    selectedUnit = selectedUnit,
+                    state = state,
+                    onSearch = { onSearch(null, it, true) },
                     onSelectItem = onSelectItem,
                     onUpdateQuantity = onUpdateQuantity,
-                    displayStats = displayStats,
                     onMoreUnits = onToggleUnitMenu,
                     onAddItem = onAddItem
                 )
@@ -148,10 +144,14 @@ fun SearchScreenHoist(
         }
     }
 
-    if (searchResults is RemoteResource.Success && showUnitMenu) {
+
+    if (
+        searchResults is RemoteResource.Success &&
+        state.showUnitMenu
+    ) {
         FullscreenUnitMenu(
-            units = searchResults.data[selectedItem].portions,
-            selectedUnit = selectedUnit,
+            units = searchResults.data[state.selectedItem].portions,
+            selectedUnit = state.selectedUnit,
             onUnitSelected = {
                 onUnitSelected(it)
                 onToggleUnitMenu()
@@ -181,15 +181,20 @@ fun SearchBar(
 
 @Composable
 fun FoodList(
-    foodList: List<FoodInfo>,
-    selectedItem: Int,
-    selectedUnit: Int,
+    state: SearchViewState,
+    onSearch: (Int) -> Unit,
     onSelectItem: (Int) -> Unit,
     onUpdateQuantity: (Float) -> Unit,
-    displayStats: List<Float>,
     onMoreUnits: () -> Unit,
     onAddItem: (LogEntry) -> Unit
 ) {
+    // We don't call FoodList unless we have a successful search
+    @Suppress("UNCHECKED_CAST")
+    val foodList = (
+        state.searchResults
+        as RemoteResource.Success<List<FoodInfo>>
+    ).data
+
     if (foodList.isEmpty()) {
         Box (
             contentAlignment = Alignment.Center,
@@ -212,11 +217,11 @@ fun FoodList(
 
                 FoodCard(
                     foodInfo = data,
-                    selectedUnit = selectedUnit,
-                    expanded = index == selectedItem,
+                    selectedUnit = state.selectedUnit,
+                    expanded = index == state.selectedItem,
                     onClick = { onSelectItem(index) },
                     onUpdateQuantity = onUpdateQuantity,
-                    displayStats = displayStats,
+                    displayStats = state.displayStats,
                     onMoreUnits = onMoreUnits,
                     onAddItem = onAddItem
                 )
@@ -229,11 +234,37 @@ fun FoodList(
                     modifier = Modifier
                         .padding(vertical = 48.dp)
                 )
-                Text(
-                    text = "End of results",
-                    fontSize = 20.sp,
-                    fontStyle = FontStyle.Italic
-                )
+                Row(
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = { onSearch(state.currentPage-1) },
+                        enabled = state.currentPage != NutracheckService.FIRST_PAGE
+                    ) {
+                        Text("Back")
+                    }
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    ) {
+                        Text(
+                            text = "page",
+                            fontSize = 15.sp,
+                            color = Color.LightGray
+                        )
+                        Text(
+                            text = (state.currentPage + 1).toString(),
+                            fontSize = 20.sp
+                        )
+                    }
+                    Button(
+                        onClick = { onSearch(state.currentPage+1) },
+                        enabled = state.hasNextPage
+                    ) {
+                        Text("Next")
+                    }
+                }
             }
 //        if () {
 //            item {
@@ -524,22 +555,21 @@ fun FullscreenUnitMenu(
                 .padding(32.dp)
                 .fillMaxSize()
         ) {
-            Text(
-                text = "Select Unit",
-                color = Color.White,
-                fontSize = 40.sp,
-                fontWeight = FontWeight.Bold,
-                textDecoration = TextDecoration.Underline,
-                modifier = Modifier
-                    .padding(16.dp)
-                    .align(Alignment.TopCenter)
-            )
             Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .align(Alignment.Center)
             ) {
-                Column {
-                    units.forEachIndexed { index, unit ->
+                Text(
+                    text = "Select Unit",
+                    color = Color.White,
+                    fontSize = 35.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .padding(16.dp)
+                )
+                LazyColumn {
+                    itemsIndexed(units) { index, unit ->
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
@@ -566,7 +596,7 @@ fun FullscreenUnitMenu(
                             )
                         }
 
-                        if (index != units.size-1) {
+                        if (index != units.lastIndex) {
                             Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
@@ -579,58 +609,82 @@ fun FullscreenUnitMenu(
 @Preview
 @Composable
 fun SearchScreenPreview() {
-    var selectedItem by remember { mutableStateOf(-1) }
-    var selectedUnit by remember { mutableStateOf(0) }
-    var quantity by remember { mutableStateOf(1.0f) }
-    var searchResults: FoodResource by remember {
-        mutableStateOf(RemoteResource.Success(fakeSearchData))
-    }
-    var displayStats by remember { mutableStateOf(emptyList<Float>())}
-    var showUnitMenu by remember { mutableStateOf(false) }
+    var state by remember { mutableStateOf(SearchViewState(
+        searchResults = RemoteResource.Success(fakeSearchData)
+    )) }
 
-    val updateStats: (Float) -> Unit = {
-        if (searchResults is RemoteResource.Success && selectedItem >= 0) {
-            val foodInfo = fakeSearchData.getOrNull(selectedItem)
+    val updateStats: (Float) -> Unit = { quantity ->
+        if (
+            state.searchResults is RemoteResource.Success &&
+            state.selectedItem >= 0
+        ) {
 
-            displayStats = if (foodInfo == null) {
-                emptyList()
-            } else {
-                listOf(
-                    foodInfo.kcal[selectedUnit] * quantity
-                )
-            }
+            val foodInfo = (
+                state.searchResults
+                as RemoteResource.Success<List<FoodInfo>>
+            ).data.getOrNull(state.selectedItem)
+
+            state = state.copy(
+                quantity = quantity,
+                displayStats =
+                    if (foodInfo == null) {
+                        emptyList()
+                    } else {
+                        listOf(
+                            foodInfo.kcal[state.selectedUnit] * quantity
+                        )
+                    }
+            )
         }
     }
 
     NutriTrackTheme {
         Scaffold(
             bottomBar = { BottomNavigation {} }
-        ) {
+        ) { innerPadding ->
 
-            SearchScreenHoist(
-                searchResults = searchResults,
-                selectedItem = selectedItem,
-                selectedUnit = selectedUnit,
-                showUnitMenu = showUnitMenu,
-                onToggleUnitMenu = { showUnitMenu = !showUnitMenu},
-                onSelectItem = {
-                    selectedItem = if (selectedItem != it) it else -1
-                    selectedUnit = 0
-                    updateStats(quantity)
-                },
-                onSearch = { searchResults = RemoteResource.Success(fakeSearchData) },
-                onRetrySearch = {},
-                onUpdateQuantity = {
-                    quantity = it
-                    updateStats(quantity)
-                },
-                displayStats = displayStats,
-                onUnitSelected = {
-                    selectedUnit = it
-                    updateStats(quantity)
-                 },
-                onAddItem = { println("Adding item: $it") }
-            )
+            Box(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+            ) {
+                SearchScreenHoist(
+                    state = state,
+                    onToggleUnitMenu = {
+                        state = state.copy(
+                            showUnitMenu = !state.showUnitMenu
+                        )
+                    },
+                    onSelectItem = {
+                        Timber.i("Here")
+                        if (state.selectedItem != it) {
+                            state = state.copy(
+                                selectedItem = it,
+                                selectedUnit = 0
+                            )
+                            updateStats(1.0f)
+                        }
+                    },
+                    onSearch = { _, _, _ ->
+                        state = state.copy(
+                            searchResults = RemoteResource.Success(fakeSearchData)
+                        )
+                    },
+                    onUpdateQuantity = {
+                        state = state.copy(
+                            quantity = it
+                        )
+                        updateStats(state.quantity)
+                    },
+                    onUnitSelected = {
+                        state = state.copy(
+                            selectedUnit = it
+                        )
+                        updateStats(state.quantity)
+                    },
+                    onAddItem = { println("Adding item: $it") }
+                )
+            }
         }
     }
 }
