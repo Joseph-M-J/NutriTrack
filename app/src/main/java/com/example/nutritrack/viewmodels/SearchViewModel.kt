@@ -41,6 +41,12 @@ class SearchViewModel constructor(private val repo: FoodRepository) : ViewModel(
         updateDisplayStats()
     }
 
+    fun toggleUnitMenu() {
+        _viewState.value = _viewState.value.copy(
+            showUnitMenu = !_viewState.value.showUnitMenu
+        )
+    }
+
     fun fetchFoodList(query: String?, force: Boolean = false) {
         val newQuery = query ?: _previousQuery
 

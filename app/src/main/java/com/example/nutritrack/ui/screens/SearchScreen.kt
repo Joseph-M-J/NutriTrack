@@ -56,6 +56,8 @@ fun SearchScreenContent(
         searchResults = state.searchResults,
         selectedItem = state.selectedItem,
         selectedUnit = state.selectedUnit,
+        showUnitMenu = state.showUnitMenu,
+        onToggleUnitMenu = searchViewModel::toggleUnitMenu,
         onSelectItem = searchViewModel::selectItem,
         onSearch = searchViewModel::fetchFoodList,
         onRetrySearch = { searchViewModel.fetchFoodList(null, true) },
@@ -71,6 +73,8 @@ fun SearchScreenHoist(
     searchResults: FoodResource,
     selectedItem: Int,
     selectedUnit: Int,
+    showUnitMenu: Boolean,
+    onToggleUnitMenu: () -> Unit,
     onSelectItem: (Int) -> Unit,
     onSearch: (String) -> Unit,
     onRetrySearch: () -> Unit,
@@ -79,8 +83,6 @@ fun SearchScreenHoist(
     onUnitSelected: (Int) -> Unit,
     onAddItem: (LogEntry) -> Unit
 ) {
-    var showUnitMenu by rememberSaveable { mutableStateOf(false) }
-
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -139,7 +141,7 @@ fun SearchScreenHoist(
                     onSelectItem = onSelectItem,
                     onUpdateQuantity = onUpdateQuantity,
                     displayStats = displayStats,
-                    onMoreUnits = { showUnitMenu = true },
+                    onMoreUnits = onToggleUnitMenu,
                     onAddItem = onAddItem
                 )
             }
@@ -152,7 +154,7 @@ fun SearchScreenHoist(
             selectedUnit = selectedUnit,
             onUnitSelected = {
                 onUnitSelected(it)
-                showUnitMenu = false
+                onToggleUnitMenu()
             }
         )
     }
@@ -539,6 +541,7 @@ fun SearchScreenPreview() {
         mutableStateOf(RemoteResource.Success(emptyList()))
     }
     var displayStats by remember { mutableStateOf(emptyList<Float>())}
+    var showUnitMenu by remember { mutableStateOf(false) }
 
     val updateStats: (Float) -> Unit = {
         if (searchResults is RemoteResource.Success && selectedItem >= 0) {
@@ -563,6 +566,8 @@ fun SearchScreenPreview() {
                 searchResults = searchResults,
                 selectedItem = selectedItem,
                 selectedUnit = selectedUnit,
+                showUnitMenu = showUnitMenu,
+                onToggleUnitMenu = { showUnitMenu = !showUnitMenu},
                 onSelectItem = {
                     selectedItem = if (selectedItem != it) it else -1
                     selectedUnit = 0
