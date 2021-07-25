@@ -2,6 +2,7 @@ package com.example.nutritrack.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.nutritrack.api.NutracheckService
 import com.example.nutritrack.data.FoodRepository
 import com.example.nutritrack.data.local.SearchViewState
 import com.example.nutritrack.data.remote.FoodInfo
@@ -21,6 +22,7 @@ class SearchViewModel constructor(private val repo: FoodRepository) : ViewModel(
 
     private var _previousQuery: String? = null
     private var _fetchJob: Job? = null
+    private var _page = NutracheckService.FIRST_PAGE
 
     private var _quantity = 1.0f
     private var _loadedEntry: LogEntry? = null
@@ -59,7 +61,7 @@ class SearchViewModel constructor(private val repo: FoodRepository) : ViewModel(
             _fetchJob?.cancel()
 
             _fetchJob = viewModelScope.launch(Dispatchers.Default) {
-                repo.fetchFoodList(newQuery, 0).collect { results ->
+                repo.fetchFoodList(newQuery, _page).collect { results ->
                     _viewState.value = _viewState.value.copy(
                         searchResults = results
                     )

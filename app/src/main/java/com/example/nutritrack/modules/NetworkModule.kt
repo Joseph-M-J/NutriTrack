@@ -11,9 +11,8 @@ object NetworkModule {
             TODO("Not yet implemented")
         }
 
-        override suspend fun getProductInfo(infoLink: String): String {
+        override suspend fun getProductInfo(productId: String, productTitle: String): String {
             TODO("Not yet implemented")
         }
-
     }
 }

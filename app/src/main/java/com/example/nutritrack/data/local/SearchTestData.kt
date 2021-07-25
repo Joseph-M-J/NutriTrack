@@ -4,7 +4,7 @@ import com.example.nutritrack.data.remote.FoodInfo
 
 val fakeSearchData = listOf(
     FoodInfo(
-        title = "Asda 50% Less Fat Mature Grated British Cheese 200g oispfoijpofjoivmoiv voidv oisdjv oisv svj ods o;asv ofnvofv ofsv ovn",
+        title = "Asda 50% Less Fat Mature Grated British Cheese 200g",
         imgRes = "13/681013.png",
         portions = listOf("100g", "25g Serving"),
         kcal = listOf(287.0f, 72.0f),

@@ -1,11 +1,10 @@
 package com.example.nutritrack.data.remote
 
-import com.example.nutritrack.R
 import timber.log.Timber
 
 data class FoodInfo(
     val title:  String = "Missing Entry",
-    val imgRes: String = R.drawable.image_missing.toString(),
+    val imgRes: String? = null,
     val portions: List<String> = emptyList(),
     val kcal:     List<Float>  = emptyList(),
     val protein:  List<Float>  = emptyList(),

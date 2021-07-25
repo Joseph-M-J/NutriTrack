@@ -32,6 +32,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.ImagePainter
+import coil.compose.rememberImagePainter
 import com.example.nutritrack.R
 import com.example.nutritrack.api.NutracheckService
 import com.example.nutritrack.data.local.fakeSearchData
@@ -41,8 +43,6 @@ import com.example.nutritrack.util.FoodResource
 import com.example.nutritrack.util.LogEntry
 import com.example.nutritrack.util.RemoteResource
 import com.example.nutritrack.viewmodels.SearchViewModel
-import com.google.accompanist.coil.rememberCoilPainter
-import com.google.accompanist.imageloading.ImageLoadState
 import timber.log.Timber
 
 @Composable
@@ -99,13 +99,13 @@ fun SearchScreenHoist(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    Text(
-                        text = "Loading",
-                        fontSize = 20.sp,
-                        color = Color.LightGray
-                    )
+//                    Text(
+//                        text = "Loading",
+//                        fontSize = 20.sp,
+//                        color = Color.LightGray
+//                    )
                     CircularProgressIndicator(
-                        modifier = Modifier.size(100.dp)
+                        modifier = Modifier.size(150.dp)
                     )
                 }
             }
@@ -196,14 +196,16 @@ fun FoodList(
             modifier = Modifier.fillMaxSize()
         ) {
             Text(
-                text = "Search For Food",
+                text = "No Results",
                 fontSize = 20.sp,
                 color = Color.Gray
             )
         }
     } else {
         // TODO(Reset scroll state)
-        LazyColumn {
+        LazyColumn(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
 
             itemsIndexed(foodList) { index, data ->
                 Spacer(modifier = Modifier.height(8.dp))
@@ -220,7 +222,19 @@ fun FoodList(
                 )
             }
 
-//        // TODO(If appending)
+            item {
+                Divider(
+                    color = Color.LightGray,
+                    thickness = 3.dp,
+                    modifier = Modifier
+                        .padding(vertical = 48.dp)
+                )
+                Text(
+                    text = "End of results",
+                    fontSize = 20.sp,
+                    fontStyle = FontStyle.Italic
+                )
+            }
 //        if () {
 //            item {
 //                CircularProgressIndicator(
@@ -268,7 +282,9 @@ fun FoodCard(
             Row (
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                FoodImage(imgRes = foodInfo.imgRes)
+                Box(modifier = Modifier.weight(0.4f)) {
+                    FoodImage(imgRes = foodInfo.imgRes)
+                }
 
                 Text(
                     text = foodInfo.title,
@@ -276,7 +292,9 @@ fun FoodCard(
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(5.dp)
+                    modifier = Modifier
+                        .padding(5.dp)
+                        .weight(0.6f)
                 )
             }
 
@@ -334,46 +352,70 @@ fun FoodCard(
 fun FoodImage(imgRes: String?) {
     val imageSize = 100.dp
 
-    if (imgRes == null) {
-        Column (
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.image_missing),
-                contentDescription = "Image Missing",
-                alpha = 0.5f,
-                modifier = Modifier.size(imageSize)
+    Surface(
+        color = Color.White,
+        modifier = Modifier.size(imageSize + 20.dp)
+    ) {
+        if (imgRes == null) {
+            Column(
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.image_missing),
+                    contentDescription = "Image Missing",
+                    alpha = 0.5f,
+                    modifier = Modifier.size(imageSize)
+                )
+                Text(
+                    text = "Image Missing",
+                    fontSize = 10.sp,
+                    color = Color.LightGray
+                )
+            }
+        } else {
+            val painter = rememberImagePainter(
+                data = NutracheckService.IMAGE_URI + imgRes,
+                builder = {
+                    crossfade(true)
+                    placeholder(R.drawable.image_empty)
+//                    transformations(CircleCropTransformation())
+                }
             )
-            Text(
-                text = "Image Missing",
-                fontSize = 10.sp,
-                color = Color.LightGray
-            )
-        }
-    } else {
-        val request = NutracheckService.IMAGE_URI + imgRes
-        val painter = rememberCoilPainter(request, fadeIn = true)
 
-        Surface(
-//            shape = RoundedCornerShape(5.dp),
-            color = Color.White,
-            modifier = Modifier.size(imageSize)
-        ) {
-            when (painter.loadState) {
-                is ImageLoadState.Success -> {
-                    Image(
+            Surface(
+    //            shape = RoundedCornerShape(5.dp),
+                color = Color.White,
+                modifier = Modifier.size(imageSize)
+            ) {
+                when (painter.state) {
+                    is ImagePainter.State.Loading -> {
+                        CircularProgressIndicator()
+                    }
+                    is ImagePainter.State.Error -> {
+                        Timber.e("Can't Load image: $imgRes")
+
+                        Column (
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.image_network_error),
+                                contentDescription = "Image Network Error",
+                                alpha = 0.5f,
+                                modifier = Modifier.size(imageSize)
+                            )
+                            Text(
+                                text = "Network Error",
+                                fontSize = 10.sp,
+                                color = Color.LightGray
+                            )
+                        }
+                    }
+                    else -> Image(
                         painter = painter,
                         contentDescription = "Food Image",
+                        alpha = if (painter.state is ImagePainter.State.Empty) 0.3f else 1.0f
                     )
-                }
-                is ImageLoadState.Loading -> {
-                    CircularProgressIndicator()
-                }
-                is ImageLoadState.Error -> {
-                    Timber.e("Can't Load image")
-                }
-                is ImageLoadState.Empty -> {
-                    Timber.e("Empty image")
                 }
             }
         }
@@ -436,28 +478,30 @@ fun QuantityField(
         trailingIcon = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 4.dp)
+                modifier = Modifier
+                    .padding(horizontal = 4.dp)
             ) {
                 Text(
                     units[selectedUnit],
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
+                    textAlign = TextAlign.End,
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
                     fontStyle =
                         if (units.size > 1) {
                             FontStyle.Italic
                         } else {
                             FontStyle.Normal
-                        }
+                        },
+                    modifier = Modifier.fillMaxWidth(0.5f)
                 )
 
-                if (units.size > 1) {
-                    Icon(
-                        imageVector = Icons.Filled.MoreVert,
-                        contentDescription = "More Units",
-                        modifier = Modifier.clickable { onClickMore() }
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Filled.MoreVert,
+                    contentDescription = "More Units",
+                    modifier = Modifier.clickable { onClickMore() }
+                )
             }
         },
         modifier = Modifier.fillMaxWidth()
@@ -517,6 +561,7 @@ fun FullscreenUnitMenu(
                                 text = unit,
                                 color = Color.White,
                                 fontSize = 25.sp,
+                                textAlign = TextAlign.Center,
                                 modifier = Modifier.padding(5.dp)
                             )
                         }
@@ -538,7 +583,7 @@ fun SearchScreenPreview() {
     var selectedUnit by remember { mutableStateOf(0) }
     var quantity by remember { mutableStateOf(1.0f) }
     var searchResults: FoodResource by remember {
-        mutableStateOf(RemoteResource.Success(emptyList()))
+        mutableStateOf(RemoteResource.Success(fakeSearchData))
     }
     var displayStats by remember { mutableStateOf(emptyList<Float>())}
     var showUnitMenu by remember { mutableStateOf(false) }

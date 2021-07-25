@@ -16,21 +16,17 @@ interface NutracheckService {
         @Query("page") page: Int
     ): String
 
-    @GET("{link}")
+    @GET("CaloriesIn/Product/{id}/{title}")
     suspend fun getProductInfo(
-        @Path("link") infoLink: String,
+        @Path("id") productId: String,
+        @Path("title") productTitle: String
     ): String
-
-//    @GET("CaloriesIn/Product/{id}/{title}")
-//    suspend fun getProductInfo(
-//        @Path("id") productId: Int,
-//        @Path("title") productTitle: String
-//    ): String
 
     companion object {
         private const val BASE_URI = "https://www.nutracheck.co.uk/"
         const val IMAGE_URI = "https://d2lhwe7okuon6r.cloudfront.net/media/productimages/148/"
         const val PAGE_SIZE = 5
+        const val FIRST_PAGE = 0
 
         fun create(): NutracheckService {
             val logger = HttpLoggingInterceptor().apply {

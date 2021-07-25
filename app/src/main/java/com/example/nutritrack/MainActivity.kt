@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
             override fun <T: ViewModel?> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
                 return SearchViewModel(
-                    FoodRepository(NetworkModule.provideFakeService())
+                    FoodRepository(NetworkModule.provideNutracheckService())
                 ) as T
             }
         }
