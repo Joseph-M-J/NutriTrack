@@ -27,7 +27,8 @@ class SearchViewModel(private val repo: FoodRepository) : ViewModel() {
         if (_viewState.value.selectedItem != foodItem) {
             _viewState.value = _viewState.value.copy(
                 selectedItem = foodItem,
-                selectedUnit = 0
+                selectedUnit = 0,
+                quantity = 1.0f
             )
             updateDisplayStats(1.0f)
         }
@@ -35,7 +36,8 @@ class SearchViewModel(private val repo: FoodRepository) : ViewModel() {
 
     fun selectUnit(foodUnit: Int) {
         _viewState.value = _viewState.value.copy(
-            selectedUnit = foodUnit
+            selectedUnit = foodUnit,
+            quantity = 1.0f
         )
         updateDisplayStats(_viewState.value.quantity)
     }

@@ -23,6 +23,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -170,6 +171,7 @@ fun SearchBar(
     // TODO(Why doesn't this not save?)
     var text by rememberSaveable{ mutableStateOf("") }
     //var noSearchResults by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
     OutlinedTextField(
         value = text,
@@ -177,7 +179,10 @@ fun SearchBar(
         label = { Text("Search") },
         singleLine = true,
         keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { onSearch(text) }),
+        keyboardActions = KeyboardActions(onDone = {
+            focusManager.clearFocus()
+            onSearch(text)
+        }),
         // isError = noSearchResults,
         modifier = Modifier.fillMaxWidth()
     )
@@ -223,6 +228,7 @@ fun FoodList(
                     foodInfo = data,
                     selectedUnit = state.selectedUnit,
                     expanded = index == state.selectedItem,
+                    currentQuantity = state.quantity,
                     onClick = { onSelectItem(index) },
                     onUpdateQuantity = onUpdateQuantity,
                     displayStats = state.displayStats,
@@ -287,6 +293,7 @@ fun FoodList(
 fun FoodCard(
     foodInfo: FoodInfo,
     selectedUnit: Int,
+    currentQuantity: Float,
     expanded: Boolean = false,
     onClick: () -> Unit,
     onUpdateQuantity: (Float) -> Unit,
@@ -343,6 +350,7 @@ fun FoodCard(
                     QuantityField(
                         units = foodInfo.portions,
                         selectedUnit = selectedUnit,
+                        currentQuantity = currentQuantity,
                         onValueChange = onUpdateQuantity,
                         onClickMore = onMoreUnits,
                         onAddItem = { onAddItem(Pair(foodInfo.title, kcal)) }
@@ -517,13 +525,18 @@ fun FoodImage(imgRes: String?) {
 fun QuantityField(
     units: List<String>,
     selectedUnit: Int,
+    currentQuantity: Float,
     onValueChange: (Float) -> Unit,
     onClickMore: () -> Unit,
     onAddItem: () -> Unit
 ) {
-    var quantityText by rememberSaveable { mutableStateOf("") }
+    val qStr = currentQuantity.toString()
+    var quantityText by remember { mutableStateOf(
+        if (qStr == "1.0") "1" else qStr
+    )}
     var valid by rememberSaveable { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
 
     OutlinedTextField(
         value = quantityText,
@@ -552,7 +565,10 @@ fun QuantityField(
             keyboardType = KeyboardType.Number,
             imeAction = ImeAction.Done
         ),
-        keyboardActions = KeyboardActions(onDone = { onAddItem() }),
+        keyboardActions = KeyboardActions(onDone = {
+            focusManager.clearFocus()
+            onAddItem()
+        }),
         singleLine = true,
         label = { Text(errorMessage) },
         placeholder = { Text("Quantity") },
@@ -591,7 +607,11 @@ fun QuantityField(
                 Icon(
                     imageVector = Icons.Filled.MoreVert,
                     contentDescription = "More Units",
-                    modifier = Modifier.clickable { onClickMore() }
+                    modifier = Modifier.clickable {
+                        quantityText = "1"
+                        focusManager.clearFocus()
+                        onClickMore()
+                    }
                 )
             }
         },
