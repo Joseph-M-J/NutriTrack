@@ -51,7 +51,7 @@ import timber.log.Timber
 @Composable
 fun SearchScreenContent(
     searchViewModel: SearchViewModel,
-    onAddItem: (LogEntry) -> Unit
+    onAddItem: () -> Unit
 ) {
     val state by searchViewModel.viewState.collectAsState()
 
@@ -62,8 +62,12 @@ fun SearchScreenContent(
         onSearch = searchViewModel::fetchFoodList,
         onUpdateQuantity = searchViewModel::updateDisplayStats,
         onUnitSelected = searchViewModel::selectUnit,
-        onAddItem = onAddItem
+        onAddItem = {
+            searchViewModel.copyLogEntry(it)
+            onAddItem()
+        }
     )
+
 }
 
 @Composable

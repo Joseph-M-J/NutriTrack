@@ -76,18 +76,42 @@ class FoodRepository constructor(private val service: NutracheckService) {
 
             portions.forEachIndexed { i, _ ->
                 val subTable = table.getElementById("prodDetails${i+1}")
-                val kcals = subTable?.select("h2 > span")?.get(0)?.ownText()?.toFloat()
+                val kcals = subTable
+                    ?.select("h2 > span")
+                    ?.get(0)
+                    ?.ownText()
+                    ?.replace(",", "")
+                    ?.toFloat()
+
                 kcalList.add(kcals ?: -1f)
 
                 val macros = subTable?.getElementsByTag("td")
 
-                val protein = macros?.get(1)?.ownText()?.dropLast(1)?.toFloat()
+                val protein = macros
+                    ?.get(1)
+                    ?.ownText()
+                    ?.dropLast(1)
+                    ?.replace(",", "")
+                    ?.toFloat()
+
                 proteinList.add(protein ?: -1f)
 
-                val carbs = macros?.get(3)?.ownText()?.dropLast(1)?.toFloat()
+                val carbs = macros
+                    ?.get(3)
+                    ?.ownText()
+                    ?.dropLast(1)
+                    ?.replace(",", "")
+                    ?.toFloat()
+
                 carbsList.add(carbs ?: -1f)
 
-                val fat = macros?.get(5)?.ownText()?.dropLast(1)?.toFloat()
+                val fat = macros
+                    ?.get(5)
+                    ?.ownText()
+                    ?.dropLast(1)
+                    ?.replace(",", "")
+                    ?.toFloat()
+
                 fatList.add(fat ?: -1f)
             }
 

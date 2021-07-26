@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
@@ -20,7 +21,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.nutritrack.data.FoodRepository
-import com.example.nutritrack.modules.NetworkModule
+import com.example.nutritrack.modules.AppModule
 import com.example.nutritrack.ui.screens.DiaryScreenContent
 import com.example.nutritrack.ui.screens.SearchScreenContent
 import com.example.nutritrack.ui.theme.NutriTrackTheme
@@ -34,7 +35,7 @@ class MainActivity : ComponentActivity() {
             override fun <T: ViewModel?> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
                 return SearchViewModel(
-                    FoodRepository(NetworkModule.provideNutracheckService())
+                    FoodRepository(AppModule.provideNutracheckService())
                 ) as T
             }
         }
@@ -42,13 +43,15 @@ class MainActivity : ComponentActivity() {
     private val diaryViewModel: DiaryViewModel by viewModels {
         object : ViewModelProvider.Factory {
             override fun <T: ViewModel?> create(modelClass: Class<T>): T {
-//                val repo = AppDatabase()
                 @Suppress("UNCHECKED_CAST")
-                return DiaryViewModel() as T
+                return DiaryViewModel(
+                    AppModule.provideAppDatabase(applicationContext)
+                ) as T
             }
         }
     }
 
+    @ExperimentalFoundationApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -60,9 +63,11 @@ class MainActivity : ComponentActivity() {
     }
     companion object {
         val startScreen = Screen.Diary
+        var currentScreen by mutableStateOf(startScreen)
     }
 }
 
+@ExperimentalFoundationApi
 @Composable
 fun MainContent(
     searchViewModel: SearchViewModel,
@@ -89,6 +94,7 @@ fun MainContent(
     }
 }
 
+@ExperimentalFoundationApi
 @Composable
 fun MainNavHost(
     searchViewModel: SearchViewModel,
@@ -112,7 +118,11 @@ fun MainNavHost(
         composable(Screen.Search.name) {
             SearchScreenContent(
                 searchViewModel = searchViewModel,
-                onAddItem = { Timber.i("Adding: $it")}
+                onAddItem = {
+                    Timber.i("Adding: $it")
+                    MainActivity.currentScreen = Screen.Diary
+                    navController.navigate(Screen.Diary.name)
+                }
             )
         }
 
@@ -130,10 +140,6 @@ fun MainNavHost(
 fun MainNavBar(
     onNavigate: (Screen) -> Unit
 ) {
-    var currentScreen by rememberSaveable {
-        mutableStateOf(MainActivity.startScreen)
-    }
-
     BottomNavigation() {
         Screen.values().forEach { screen ->
             BottomNavigationItem(
@@ -146,10 +152,10 @@ fun MainNavBar(
                 label = {
                     Text(screen.name)
                 },
-                selected = screen == currentScreen,
+                selected = screen == MainActivity.currentScreen,
                 onClick = {
                     onNavigate(screen)
-                    currentScreen = screen
+                    MainActivity.currentScreen = screen
                 }
             )
         }

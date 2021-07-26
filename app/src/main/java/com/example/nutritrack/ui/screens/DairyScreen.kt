@@ -1,7 +1,6 @@
 package com.example.nutritrack.ui.screens
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement.Absolute.SpaceBetween
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,10 +16,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nutritrack.data.local.DiaryViewState
+import com.example.nutritrack.data.model.LogsEntity
+import com.example.nutritrack.util.testLog
 import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.ui.theme.mealCategoryColors
 import com.example.nutritrack.util.LogEntry
@@ -28,6 +30,7 @@ import com.example.nutritrack.util.MealCategory
 import com.example.nutritrack.viewmodels.DiaryViewModel
 import com.example.nutritrack.viewmodels.SearchViewModel
 
+@ExperimentalFoundationApi
 @Composable
 fun DiaryScreenContent(
     diaryViewModel: DiaryViewModel,
@@ -37,17 +40,32 @@ fun DiaryScreenContent(
 
     DiaryScreenHoist(
         state = state,
-        onAddEntry = {
-//            diaryViewModel.addLogEntry(it, searchViewModel.pasteLogEntry())
-            diaryViewModel.addLogEntry(it, Pair("Testing", 100.0f))
-        }
+        onAddEntry = { category ->
+            searchViewModel.pasteLogEntry()?.also { (title, kcal) ->
+                diaryViewModel.updateLog(
+                    entity = LogsEntity(
+                        category = category,
+                        title = title,
+                        kcal = kcal,
+                        date = diaryViewModel.date
+                    ),
+                    add = true
+                )
+            }
+            // diaryViewModel.addLogEntry(it, Pair("Testing", 500.0f))
+        },
+        onRemoveEntry = { diaryViewModel.updateLog(entity = it, add = false) },
+        onLongPressEntry = diaryViewModel::selectEntity
     )
 }
 
+@ExperimentalFoundationApi
 @Composable
 fun DiaryScreenHoist(
     state: DiaryViewState,
-    onAddEntry: (MealCategory) -> Unit
+    onAddEntry: (MealCategory) -> Unit,
+    onRemoveEntry: (LogsEntity) -> Unit,
+    onLongPressEntry: (Long) -> Unit
 ) {
     Column(
         verticalArrangement = Arrangement.SpaceBetween,
@@ -65,9 +83,9 @@ fun DiaryScreenHoist(
                 .padding(16.dp)
                 .weight(0.9f)
         ) {
-            state.currentLog.forEach {
-                val category = it.key
-                val entries = it.value
+            state.currentLog.forEach { meal ->
+                val category = meal.key
+                val entries = meal.value
                 val color = mealCategoryColors.getOrElse(category) { Color.Gray }
 
                 item {
@@ -126,19 +144,47 @@ fun DiaryScreenHoist(
                             Column (
                                 horizontalAlignment = CenterHorizontally
                             ){
-                                entries.forEach { (name, kcal) ->
+                                entries.forEach { entity ->
+                                    val selected = state.selectedId == entity.id
+
                                     Row(
                                         verticalAlignment = CenterVertically,
                                         horizontalArrangement = SpaceBetween,
                                         modifier = Modifier
+                                            .combinedClickable(
+                                                onClick = {
+                                                    if (selected) onRemoveEntry(entity)
+                                                },
+                                                onLongClick = { onLongPressEntry(entity.id) }
+                                            )
+                                            .background(
+                                                if (selected) {
+                                                    Brush.verticalGradient(
+                                                        startY = 15.0f,
+                                                        colors = listOf(
+                                                            Color.White,
+                                                            Color.Red.copy(alpha = 0.2f)
+                                                        )
+                                                    )
+                                                } else {
+                                                    Brush.verticalGradient(listOf(
+                                                        Color.White,
+                                                        Color.White
+                                                    ))
+                                                }
+                                            )
                                             .padding(8.dp)
                                             .fillMaxWidth()
+
                                     ) {
                                         Text(
-                                            text = name
+                                            text = entity.title,
+                                            modifier = Modifier.weight(0.7f)
                                         )
                                         Text(
-                                            text = "%.1f".format(kcal)
+                                            text = "%.1f".format(entity.kcal),
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.weight(0.3f)
                                         )
                                     }
                                     Divider()
@@ -191,55 +237,72 @@ fun DiaryScreenHoist(
     }
 }
 
-@Preview
-@Composable
-fun DiaryScreenPreview() {
-    var state by remember { mutableStateOf(DiaryViewState()) }
-
-    val getSubTotalKcal: (MealCategory) -> Float = { category ->
-        state.currentLog.getOrElse(category) { emptyList() }
-            .map { it.second }
-            .sum()
-    }
-
-    val getTotalKcal: () -> Float = {
-        state.currentLog.keys
-            .map { getSubTotalKcal(it) }
-            .sum()
-    }
-
-    val onAddEntry: (MealCategory, LogEntry) -> Unit = { category, entry ->
-        val entries = state.currentLog.getOrElse(category) { emptyList() }
-
-        state = state.copy(
-            currentLog = state.currentLog.map {
-                if (it.key == category) {
-                    category to entries.plus(entry)
-                } else {
-                    it.toPair()
-                }
-            }.toMap()
-        )
-    }
-
-
-    NutriTrackTheme {
-        Scaffold(
-            bottomBar = { BottomNavigation {} }
-        ) { innerPadding ->
-
-            Box(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize()
-            ) {
-                DiaryScreenHoist(
-                    state = state,
-                    onAddEntry = {
-                        onAddEntry(it, Pair("Test entry", 100.2944f))
-                    }
-                )
-            }
-        }
-    }
-}
+//@ExperimentalFoundationApi
+//@Preview
+//@Composable
+//fun DiaryScreenPreview() {
+//    var state by remember { mutableStateOf(
+//        DiaryViewState(
+//        currentLog = testLog
+////        selectedEntry = testLog[MealCategory.BREAKFAST]?.getOrNull(0)
+//    )
+//    ) }
+//
+//    val getSubTotalKcal: (MealCategory) -> Float = { category ->
+//        state.currentLog.getOrElse(category) { emptyList() }
+//            .map { it.second }
+//            .sum()
+//    }
+//
+//    val getTotalKcal: () -> Float = {
+//        state.currentLog.keys
+//            .map { getSubTotalKcal(it) }
+//            .sum()
+//    }
+//
+//    val onModifyEntry: (MealCategory, LogEntry, Boolean) -> Unit = { category, entry, add ->
+//        val entries = state.currentLog.getOrElse(category) { emptyList() }
+//
+//        state = state.copy(
+//            currentLog = state.currentLog.map {
+//                if (it.key == category) {
+//                    category to if (add) entries.plus(entry) else entries.minus(entry)
+//                } else {
+//                    it.toPair()
+//                }
+//            }.toMap()
+//        )
+//    }
+//
+//
+//    val selectEntry: (LogEntry) -> Unit = { entry ->
+//        state = state.copy(
+//            selectedId = if (state.selectedId == entry) null else entry
+//        )
+//    }
+//
+//
+//    NutriTrackTheme {
+//        Scaffold(
+//            bottomBar = { BottomNavigation {} }
+//        ) { innerPadding ->
+//
+//            Box(
+//                modifier = Modifier
+//                    .padding(innerPadding)
+//                    .fillMaxSize()
+//            ) {
+//                DiaryScreenHoist(
+//                    state = state,
+//                    onAddEntry = { category ->
+//                        onModifyEntry(category, Pair("Test entry", 100.2944f), true)
+//                    },
+//                    onRemoveEntry = { category, entry ->
+//                        onModifyEntry(category, entry, false)
+//                    },
+//                    onLongPressEntry = selectEntry
+//                )
+//            }
+//        }
+//    }
+//}

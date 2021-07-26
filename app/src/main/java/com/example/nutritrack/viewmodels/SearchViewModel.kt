@@ -2,10 +2,8 @@ package com.example.nutritrack.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.nutritrack.api.NutracheckService
 import com.example.nutritrack.data.FoodRepository
 import com.example.nutritrack.data.local.SearchViewState
-import com.example.nutritrack.data.remote.FoodInfo
 import com.example.nutritrack.util.LogEntry
 import com.example.nutritrack.util.RemoteResource
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
-class SearchViewModel constructor(private val repo: FoodRepository) : ViewModel() {
+class SearchViewModel(private val repo: FoodRepository) : ViewModel() {
 
     private val _viewState = MutableStateFlow(SearchViewState())
     val viewState: StateFlow<SearchViewState> = _viewState

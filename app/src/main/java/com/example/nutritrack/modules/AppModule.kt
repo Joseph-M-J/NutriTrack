@@ -1,12 +1,14 @@
 package com.example.nutritrack.modules
 
+import android.content.Context
 import com.example.nutritrack.api.NutracheckService
+import com.example.nutritrack.data.model.AppDatabase
 
-object NetworkModule {
+object AppModule {
 
     fun provideNutracheckService(): NutracheckService = NutracheckService.create()
 
-    fun provideFakeService(): NutracheckService = object : NutracheckService {
+    fun provideFakeNutracheckService(): NutracheckService = object : NutracheckService {
         override suspend fun searchProducts(desc: String, page: Int): String {
             TODO("Not yet implemented")
         }
@@ -15,4 +17,6 @@ object NetworkModule {
             TODO("Not yet implemented")
         }
     }
+
+    fun provideAppDatabase(context: Context): AppDatabase = AppDatabase.getInstance(context)
 }
