@@ -15,6 +15,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -41,6 +43,7 @@ import com.example.nutritrack.data.remote.FoodInfo
 import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.util.FoodResource
 import com.example.nutritrack.util.LogEntry
+import com.example.nutritrack.util.MealCategory
 import com.example.nutritrack.util.RemoteResource
 import com.example.nutritrack.viewmodels.SearchViewModel
 import timber.log.Timber
@@ -56,11 +59,7 @@ fun SearchScreenContent(
         state = state,
         onToggleUnitMenu = searchViewModel::toggleUnitMenu,
         onSelectItem = searchViewModel::selectItem,
-        onSearch = { q, p, f ->
-            searchViewModel.fetchFoodList(
-                query = q, page = p, force = f
-            )
-        },
+        onSearch = searchViewModel::fetchFoodList,
         onUpdateQuantity = searchViewModel::updateDisplayStats,
         onUnitSelected = searchViewModel::selectUnit,
         onAddItem = onAddItem
@@ -164,7 +163,8 @@ fun SearchScreenHoist(
 fun SearchBar(
     onSearch: (String) -> Unit
 ) {
-    var text by rememberSaveable { mutableStateOf("") }
+    // TODO(Why doesn't this not save?)
+    var text by rememberSaveable{ mutableStateOf("") }
     //var noSearchResults by remember { mutableStateOf(false) }
 
     OutlinedTextField(
@@ -290,6 +290,7 @@ fun FoodCard(
     onMoreUnits: () -> Unit,
     onAddItem: (LogEntry) -> Unit
 ) {
+    var showExtra by rememberSaveable { mutableStateOf(false) }
     val kcal = displayStats.getOrElse(0) { 0.0f }
 
     Card(
@@ -330,7 +331,7 @@ fun FoodCard(
             }
 
             if (expanded) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Column (
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -343,7 +344,7 @@ fun FoodCard(
                         onAddItem = { onAddItem(Pair(foodInfo.title, kcal)) }
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -351,7 +352,7 @@ fun FoodCard(
                     ) {
                         Row (
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(0.8f)
+                            modifier = Modifier.weight(0.75f)
                         ){
                             Text(
                                 text = "⚡Kcal",
@@ -366,16 +367,71 @@ fun FoodCard(
                             )
                         }
 
-                        OutlinedButton(
-                            onClick = { onAddItem(Pair(foodInfo.title, kcal)) },
-                            modifier = Modifier.weight(0.2f)
-                        ) {
-                            Text("Add")
-                        }
+                        Icon(
+                            imageVector =
+                                if (showExtra) {
+                                    Icons.Filled.ExpandLess
+                                } else {
+                                    Icons.Filled.ExpandMore
+                                },
+                            contentDescription = "Toggle Extra",
+                            modifier = Modifier
+                                .weight(0.15f)
+                                .size(30.dp)
+                                .border(
+                                    width = 1.dp,
+                                    color = Color.LightGray,
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .clickable { showExtra = !showExtra }
+                        )
+                    }
+                }
+
+                if (showExtra) {
+                    val protein = displayStats.getOrElse(1) { 0.0f }
+                    val carbs = displayStats.getOrElse(2) { 0.0f }
+                    val fat = displayStats.getOrElse(3) { 0.0f }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row (
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ){
+                        val modifier = Modifier.weight(1 / 3.0f)
+
+                        Macronutrient(modifier, protein, "\uD83E\uDD69Protein")
+
+                        Macronutrient(modifier, carbs, "\uD83E\uDD50Carbs")
+
+                        Macronutrient(modifier, fat, "\uD83E\uDDC8Fat")
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun Macronutrient(
+    modifier: Modifier,
+    value: Float,
+    label: String
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+    ) {
+        Text(
+            text = "%.2f".format(value) + "g",
+            fontSize = 20.sp
+        )
+        Text(
+            text = label,
+            color = Color.Gray,
+            fontSize = 20.sp
+        )
     }
 }
 
@@ -610,6 +666,7 @@ fun FullscreenUnitMenu(
 @Composable
 fun SearchScreenPreview() {
     var state by remember { mutableStateOf(SearchViewState(
+        selectedItem = 0,
         searchResults = RemoteResource.Success(fakeSearchData)
     )) }
 
@@ -631,8 +688,11 @@ fun SearchScreenPreview() {
                         emptyList()
                     } else {
                         listOf(
-                            foodInfo.kcal[state.selectedUnit] * quantity
-                        )
+                            foodInfo.kcal[state.selectedUnit],
+                            foodInfo.protein[state.selectedUnit],
+                            foodInfo.carbs[state.selectedUnit],
+                            foodInfo.fat[state.selectedUnit],
+                        ).map { x -> x * quantity}
                     }
             )
         }

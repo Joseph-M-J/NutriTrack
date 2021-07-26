@@ -90,7 +90,7 @@ class SearchViewModel constructor(private val repo: FoodRepository) : ViewModel(
                 foodInfo.protein[unit],
                 foodInfo.carbs[unit],
                 foodInfo.fat[unit]
-            ).map { x -> x * quantity }
+            ).map { it * quantity }
         )
     }
 
