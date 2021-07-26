@@ -132,10 +132,12 @@ class FoodRepository constructor(private val service: NutracheckService) {
                 protein = proteinList,
                 carbs = carbsList,
                 fat = fatList
-            )
+            ).generatePortions()
+
         } catch (e: NoSuchElementException) {
             Timber.w(e)
             null
+
         } catch (e: Exception) {
             Timber.e(e)
             null

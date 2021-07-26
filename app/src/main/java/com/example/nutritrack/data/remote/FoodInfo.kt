@@ -1,7 +1,5 @@
 package com.example.nutritrack.data.remote
 
-import timber.log.Timber
-
 data class FoodInfo(
     val title:  String = "Missing Entry",
     val imgRes: String? = null,
@@ -11,40 +9,32 @@ data class FoodInfo(
     val carbs:    List<Float>  = emptyList(),
     val fat:      List<Float>  = emptyList()
 ) {
-    fun normalized(): FoodInfo {
-        val newPortions = mutableListOf<String>()
-        val newKcals    = mutableListOf<Float>()
-        val newProtein  = mutableListOf<Float>()
-        val newCarbs    = mutableListOf<Float>()
-        val newFat      = mutableListOf<Float>()
+    fun generatePortions(): FoodInfo {
+        val newPortions = portions.toMutableList()
+        val newKcal     = kcal.toMutableList()
+        val newProtein  = protein.toMutableList()
+        val newCarbs    = carbs.toMutableList()
+        val newFat      = fat.toMutableList()
 
         portions.forEachIndexed { index, portion ->
-            val portionLower = portion.lowercase()
+            val loc = normRgx.find(portion.lowercase())
 
-            Timber.i("'$portionLower'")
+            if (loc != null) {
+                val num = loc.value.takeWhile { it.isDigit() }
 
-            var normalizedName = portionLower
-            var portionSize = 1.0f
+                // New name for portion
+                val name = loc.value.replace(num, "")
 
-            if (normRegex.containsMatchIn(portionLower)) {
-                Timber.i("Regex matched")
+                // Factor to scale the macronutrients
+                val scale = num.toFloat()
 
-                val res1 = normRegex.find(portionLower)!!
-                val res2 = valueRegex.find(res1.value)!!
-
-                // Re-name portion size
-                normalizedName = res1.value.slice(res2.range.last+1 until res1.value.length)
-
-                // Normalize the macronutrients
-                portionSize = res2.value.toFloat()
-            }
-
-            if (!newPortions.contains(normalizedName)) {
-                newPortions.add(normalizedName)
-                newKcals.add(kcal[index] / portionSize)
-                newProtein.add(protein[index] / portionSize)
-                newCarbs.add(carbs[index] / portionSize)
-                newFat.add(fat[index] / portionSize)
+                if (!newPortions.contains(name)) {
+                    newPortions.add(name)
+                    newKcal.add(kcal[index] / scale)
+                    newProtein.add(protein[index] / scale)
+                    newCarbs.add(carbs[index] / scale)
+                    newFat.add(fat[index] / scale)
+                }
             }
         }
 
@@ -52,7 +42,7 @@ data class FoodInfo(
             title,
             imgRes,
             newPortions,
-            newKcals,
+            newKcal,
             newProtein,
             newCarbs,
             newFat
@@ -60,7 +50,8 @@ data class FoodInfo(
     }
 
     companion object {
-        private val normRegex = """(?!=\()\d+(g|ml)(?!\))""".toRegex()
-        private val valueRegex = """\d+""".toRegex()
+        private val normRgx = """\d+(g|ml)""".toRegex()
+//        private val normRegex = """(?!=\()\d+(g|ml)(?!\))""".toRegex()
+        private val valueRgx = """\d+""".toRegex()
     }
 }
