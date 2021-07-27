@@ -19,10 +19,9 @@ data class DiaryViewState(
 
     val totalKcal: Float = 0.0f,
 
-    val selectedId: Long = -1
+    val selectedId: Long = -1,
 
-//    val breakfast: List<LogEntry> = emptyList(),
-//    val lunch: List<LogEntry> = emptyList(),
-//    val dinner: List<LogEntry> = emptyList(),
-//    val snacks: List<LogEntry> = emptyList()
+    val selectedCategory: MealCategory? = null,
+
+    val showQuickAddMenu: Boolean = false
 )

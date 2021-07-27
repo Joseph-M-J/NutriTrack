@@ -21,7 +21,7 @@ class SearchViewModel(private val repo: FoodRepository) : ViewModel() {
     private var _previousQuery: String? = null
     private var _fetchJob: Job? = null
 
-    private var _loadedEntry: LogEntry? = null
+    private var _loadedEntry = mutableListOf<LogEntry>()
 
     fun selectItem(foodItem: Int) {
         if (_viewState.value.selectedItem != foodItem) {
@@ -95,12 +95,12 @@ class SearchViewModel(private val repo: FoodRepository) : ViewModel() {
     }
 
     fun copyLogEntry(entry: LogEntry) {
-        _loadedEntry = entry
+        _loadedEntry.add(entry)
     }
 
-    fun pasteLogEntry(): LogEntry? {
-        val entry = _loadedEntry?.copy()
-        _loadedEntry = null
+    fun pasteLogEntry(): List<LogEntry> {
+        val entry = listOf(*_loadedEntry.toTypedArray())
+        _loadedEntry.clear()
         return entry
     }
 }

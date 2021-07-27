@@ -122,6 +122,15 @@ class DiaryViewModel(private val db: AppDatabase): ViewModel() {
         }.toMap()
     }
 
+    fun toggleQuickAddMenu(category: MealCategory) {
+        val show = _viewState.value.showQuickAddMenu
+
+        _viewState.value = _viewState.value.copy(
+            showQuickAddMenu = !show,
+            selectedCategory = if (show) null else category
+        )
+    }
+
 //    private fun getSubTotalKcal(entities: List<LogsEntity>): Float {
 //        return entities.map { it.kcal }.sum()
 //    }

@@ -233,7 +233,10 @@ fun FoodList(
                     onUpdateQuantity = onUpdateQuantity,
                     displayStats = state.displayStats,
                     onMoreUnits = onMoreUnits,
-                    onAddItem = onAddItem
+                    onAddItem = {
+                        onSelectItem(-1)
+                        onAddItem(it)
+                    }
                 )
             }
 

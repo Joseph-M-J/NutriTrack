@@ -120,8 +120,8 @@ fun MainNavHost(
                 searchViewModel = searchViewModel,
                 onAddItem = {
                     Timber.i("Adding: $it")
-                    MainActivity.currentScreen = Screen.Diary
-                    navController.navigate(Screen.Diary.name)
+//                    MainActivity.currentScreen = Screen.Diary
+//                    navController.navigate(Screen.Diary.name)
                 }
             )
         }

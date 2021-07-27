@@ -27,14 +27,37 @@ class FoodRepository constructor(private val service: NutracheckService) {
             val doc = Jsoup.parse(response)
 
             val elements = doc.getElementsByClass("calsinResultsArrow")
+            val backupImages = doc.getElementsByClass("img-respinsive").map {
+                val srcSplit = it.attr("src").split("/")
 
-            val data = elements.mapNotNull {
-                val rawLink = it.child(0).attr("href")
+                srcSplit
+                    .slice(srcSplit.lastIndex - 1 until srcSplit.size)
+                    .joinToString("/")
+            }
+            val backupStats = doc.getElementsByClass("textNoDecoration").map {
+                val stats = it.ownText().split("|").getOrElse(0) {"Bug!! - 0 calories"}
+                val statsSplit = stats.split("-")
+                Pair(
+                    statsSplit[0].replace("Per", "").trim(),
+                    statsSplit[1].trim().takeWhile { it.isDigit() }.toFloat()
+                )
+            }
+
+            val data = elements.mapIndexed { index, element ->
+                val rawLink = element.child(0).attr("href")
                 val splitLink = rawLink.split("/")
                 val id = splitLink[splitLink.lastIndex - 1]
                 val rawTitle = splitLink[splitLink.lastIndex]
                 val title = URLDecoder.decode(rawTitle, "utf-8")
-                extractInfo(id, title)
+                extractInfo(id, title) ?: FoodInfo(
+                    title = title,
+                    imgRes = backupImages[index],
+                    portions = listOf(backupStats[index].first),
+                    kcal = listOf(backupStats[index].second),
+                    protein = listOf(0.0f),
+                    carbs = listOf(0.0f),
+                    fat = listOf(0.0f)
+                )
             }
 
             val hasNextPage = doc.getElementsContainingOwnText("Next").isNotEmpty()
@@ -67,6 +90,7 @@ class FoodRepository constructor(private val service: NutracheckService) {
             if (portionOptions.isEmpty()) throw NoSuchElementException()
 
             // Extract portions
+            // TODO(These can be empty)
             val portions = portionOptions.map { it.ownText() }
 
             val kcalList    = mutableListOf<Float>()

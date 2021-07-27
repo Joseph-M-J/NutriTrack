@@ -4,18 +4,26 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement.Absolute.SpaceBetween
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Alignment.Companion.CenterVertically
+import androidx.compose.ui.Alignment.Companion.TopCenter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -27,6 +35,7 @@ import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.ui.theme.mealCategoryColors
 import com.example.nutritrack.util.LogEntry
 import com.example.nutritrack.util.MealCategory
+import com.example.nutritrack.util.RemoteResource
 import com.example.nutritrack.viewmodels.DiaryViewModel
 import com.example.nutritrack.viewmodels.SearchViewModel
 
@@ -41,18 +50,40 @@ fun DiaryScreenContent(
     DiaryScreenHoist(
         state = state,
         onAddEntry = { category ->
-            searchViewModel.pasteLogEntry()?.also { (title, kcal) ->
-                diaryViewModel.updateLog(
-                    entity = LogsEntity(
-                        category = category,
-                        title = title,
-                        kcal = kcal,
-                        date = diaryViewModel.date
-                    ),
-                    add = true
-                )
+            val entries = searchViewModel.pasteLogEntry()
+
+            if (entries.isEmpty()) {
+                diaryViewModel.toggleQuickAddMenu(category)
+            } else {
+                entries.forEach { (title, kcal) ->
+                    diaryViewModel.updateLog(
+                        entity = LogsEntity(
+                            category = category,
+                            title = title,
+                            kcal = kcal,
+                            date = diaryViewModel.date
+                        ),
+                        add = true
+                    )
+                }
             }
             // diaryViewModel.addLogEntry(it, Pair("Testing", 500.0f))
+        },
+        onQuickAddEntry = { entry ->
+            state.selectedCategory?.let { category ->
+                if (entry != null) {
+                    diaryViewModel.updateLog(
+                        entity = LogsEntity(
+                            category = category,
+                            title = entry.first,
+                            kcal = entry.second,
+                            date = diaryViewModel.date
+                        ),
+                        add = true
+                    )
+                }
+                diaryViewModel.toggleQuickAddMenu(category)
+            }
         },
         onRemoveEntry = { diaryViewModel.updateLog(entity = it, add = false) },
         onLongPressEntry = diaryViewModel::selectEntity
@@ -64,6 +95,7 @@ fun DiaryScreenContent(
 fun DiaryScreenHoist(
     state: DiaryViewState,
     onAddEntry: (MealCategory) -> Unit,
+    onQuickAddEntry: (LogEntry?) -> Unit,
     onRemoveEntry: (LogsEntity) -> Unit,
     onLongPressEntry: (Long) -> Unit
 ) {
@@ -167,10 +199,12 @@ fun DiaryScreenHoist(
                                                         )
                                                     )
                                                 } else {
-                                                    Brush.verticalGradient(listOf(
-                                                        Color.White,
-                                                        Color.White
-                                                    ))
+                                                    Brush.verticalGradient(
+                                                        listOf(
+                                                            Color.White,
+                                                            Color.White
+                                                        )
+                                                    )
                                                 }
                                             )
                                             .padding(8.dp)
@@ -233,6 +267,138 @@ fun DiaryScreenHoist(
                 fontWeight = FontWeight.Bold,
                 fontSize = 30.sp
             )
+        }
+    }
+
+    if (state.showQuickAddMenu) {
+        FullscreenQuickAddMenu(onAddEntry = onQuickAddEntry)
+    }
+}
+
+@Composable
+fun FullscreenQuickAddMenu(
+    onAddEntry: (LogEntry?) -> Unit
+) {
+    var titleText by rememberSaveable { mutableStateOf("") }
+    var kcalText by rememberSaveable { mutableStateOf("") }
+    var titleValid by rememberSaveable { mutableStateOf(false) }
+    var kcalValid by rememberSaveable { mutableStateOf(false) }
+    var titleErrorMessage by rememberSaveable { mutableStateOf("No Title") }
+    var kcalErrorMessage by rememberSaveable { mutableStateOf("No Number") }
+    var kcal = 0.0f
+    val focusManager = LocalFocusManager.current
+
+    Surface(
+        color = Color.Black.copy(alpha = 0.8f),
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        Box(
+            contentAlignment = TopCenter,
+            modifier = Modifier
+                .padding(32.dp)
+                .fillMaxSize()
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.6f)
+                    .background(Color.White)
+            ) {
+                OutlinedTextField(
+                    value = titleText,
+                    label = {
+                        Text(
+                            text = if (titleErrorMessage.isBlank()) "Title" else titleErrorMessage
+                        )
+                    },
+                    onValueChange = {
+                        titleText = it
+                        titleValid = if (it.isBlank()) {
+                            titleErrorMessage = "No Title"
+                            false
+                        } else {
+                            titleErrorMessage = ""
+                            true
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(onDone = {
+                        focusManager.clearFocus()
+                    }),
+                    isError = !titleValid,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .weight(0.6f)
+                )
+                OutlinedTextField(
+                    value = kcalText,
+                    label = {
+                        Text(
+                            text = if (kcalErrorMessage.isBlank()) "Kcal" else kcalErrorMessage
+                        )
+                    },
+                    onValueChange = {
+                        kcalText = it
+                        kcalValid = try {
+                            kcal = it.toFloat()
+                            if (kcal > 100_000) {
+                                throw IllegalArgumentException("Too Big")
+                            }
+                            if (kcal <= 0) {
+                                throw IllegalArgumentException("Too Small")
+                            }
+                            kcalErrorMessage = ""
+                            true
+                        } catch (e: NumberFormatException) {
+                            kcalErrorMessage = "Invalid Number"
+                            false
+                        } catch (e: IllegalArgumentException) {
+                            kcalErrorMessage = e.message ?: ""
+                            false
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(onDone = {
+                        focusManager.clearFocus()
+                    }),
+                    isError = !kcalValid,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .weight(0.4f)
+                )
+                Row {
+                    OutlinedButton(
+                        onClick = {
+                            focusManager.clearFocus()
+                            onAddEntry(null)
+                        },
+                        modifier = Modifier.padding(8.dp)
+                    ) {
+                        Text(
+                            text = "Cancel"
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            focusManager.clearFocus()
+                            onAddEntry(LogEntry(titleText, kcal))
+                        },
+                        enabled = titleValid && kcalValid,
+                        modifier = Modifier.padding(8.dp)
+                    ) {
+                        Text(
+                            text = "Add"
+                        )
+                    }
+                }
+            }
         }
     }
 }
