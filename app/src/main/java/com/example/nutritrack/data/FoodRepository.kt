@@ -36,7 +36,7 @@ class FoodRepository constructor(private val service: NutracheckService) {
             }
             val backupStats = doc.getElementsByClass("textNoDecoration").map {
                 val stats = it.ownText().split("|").getOrElse(0) {"Bug!! - 0 calories"}
-                val statsSplit = stats.split("-")
+                val statsSplit = stats.split(" - ")
                 Pair(
                     statsSplit[0].replace("Per", "").trim(),
                     statsSplit[1].trim().takeWhile { it.isDigit() }.toFloat()
@@ -57,7 +57,7 @@ class FoodRepository constructor(private val service: NutracheckService) {
                     protein = listOf(0.0f),
                     carbs = listOf(0.0f),
                     fat = listOf(0.0f)
-                )
+                ).generatePortions()
             }
 
             val hasNextPage = doc.getElementsContainingOwnText("Next").isNotEmpty()

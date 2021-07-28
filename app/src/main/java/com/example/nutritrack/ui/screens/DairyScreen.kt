@@ -194,15 +194,15 @@ fun DiaryScreenHoist(
                                                     Brush.verticalGradient(
                                                         startY = 15.0f,
                                                         colors = listOf(
-                                                            Color.White,
+                                                            Color.Transparent,
                                                             Color.Red.copy(alpha = 0.2f)
                                                         )
                                                     )
                                                 } else {
                                                     Brush.verticalGradient(
                                                         listOf(
-                                                            Color.White,
-                                                            Color.White
+                                                            Color.Transparent,
+                                                            Color.Transparent
                                                         )
                                                     )
                                                 }
@@ -304,7 +304,9 @@ fun FullscreenQuickAddMenu(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight(0.6f)
-                    .background(Color.White)
+                    .background(
+                        if (isSystemInDarkTheme()) Color.Black else Color.White
+                    )
             ) {
                 OutlinedTextField(
                     value = titleText,
