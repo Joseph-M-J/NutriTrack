@@ -12,6 +12,10 @@ data class DiaryViewState(
         .map { it to emptyList<LogsEntity>() }
         .toMap(),
 
+    val displayDate: String = "--/--/--",
+
+    val isToday: Boolean = false,
+
     val subTotalKcal: Map<MealCategory, Float> = MealCategory
         .values()
         .map { it to 0.0f }

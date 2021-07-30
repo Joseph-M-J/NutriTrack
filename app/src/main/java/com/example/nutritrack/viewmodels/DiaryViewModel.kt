@@ -26,17 +26,23 @@ class DiaryViewModel(private val db: AppDatabase): ViewModel() {
 
     private val logsDAO = db.logsDAO()
 
-    val date: String = try {
-        val fmt = SimpleDateFormat.getDateInstance(SimpleDateFormat.SHORT)
-        val date = fmt.format(Date())
-        if (date.isEmpty()) throw Exception("Date was null")
-        date
-    } catch (e: Exception) {
-        Timber.e(e)
-        "Today"
-    }
+    private var day: Int = -1
+    private var month: Int = -1
+    private var year: Int = -1
 
     init {
+        val fmt = SimpleDateFormat.getDateInstance(SimpleDateFormat.SHORT)
+        val date = fmt.format(Date())
+        val dateSplit = date.split("/")
+        day = dateSplit[1].toInt()
+        month = dateSplit[0].toInt()
+        year = dateSplit[2].toInt()
+
+        _viewState.value = _viewState.value.copy(
+            displayDate = "$day/$month/$year",
+            isToday = true
+        )
+
         /**** INIT WITH TEST DATA ****/
 //        runBlocking {
 //            logsDAO.insertAll(
@@ -75,6 +81,10 @@ class DiaryViewModel(private val db: AppDatabase): ViewModel() {
                 )
             }
         }
+    }
+
+    fun changeDate() {
+
     }
 
     fun selectEntity(id: Long) {
