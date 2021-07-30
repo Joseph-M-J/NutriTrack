@@ -15,7 +15,7 @@ class FoodRepository constructor(private val service: NutracheckService) {
 
     fun fetchFoodList(query: String, page: Int): Flow<Pair<FoodResource, Boolean>> = flow {
         emit(Pair(RemoteResource.Loading(), true))
-        delay(1000)
+        //delay(1000)
         emit(fetchNutracheckPage(query, page))
     }
 
