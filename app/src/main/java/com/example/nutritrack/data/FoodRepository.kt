@@ -1,10 +1,9 @@
 package com.example.nutritrack.data
 
 import com.example.nutritrack.api.NutracheckService
-import com.example.nutritrack.data.remote.FoodInfo
+import com.example.nutritrack.data.model.FoodEntity
 import com.example.nutritrack.util.FoodResource
 import com.example.nutritrack.util.RemoteResource
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import org.jsoup.Jsoup
@@ -34,13 +33,20 @@ class FoodRepository constructor(private val service: NutracheckService) {
                     .slice(srcSplit.lastIndex - 1 until srcSplit.size)
                     .joinToString("/")
             }
-            val backupStats = doc.getElementsByClass("textNoDecoration").map {
-                val stats = it.ownText().split("|").getOrElse(0) {"Bug!! - 0 calories"}
-                val statsSplit = stats.split(" - ")
-                Pair(
-                    statsSplit[0].replace("Per", "").trim(),
-                    statsSplit[1].trim().takeWhile { it.isDigit() }.toFloat()
-                )
+            val backupStats = doc.getElementsByClass("textNoDecoration").map { elem ->
+                val cachedStats = elem.ownText()
+                val rgx1 = """\d+ calories""".toRegex()
+                val rgx1Res = rgx1.find(cachedStats)
+
+                var kcal = 0.0f
+                if (rgx1Res != null) {
+                    kcal = rgx1Res.value.takeWhile{ it.isDigit() }.toFloat()
+                }
+
+                var portion = cachedStats.split(" - ").getOrNull(0) ?: "?"
+                portion = portion.replace("Per", "").trim()
+
+                Pair(portion, kcal)
             }
 
             val data = elements.mapIndexed { index, element ->
@@ -49,7 +55,7 @@ class FoodRepository constructor(private val service: NutracheckService) {
                 val id = splitLink[splitLink.lastIndex - 1]
                 val rawTitle = splitLink[splitLink.lastIndex]
                 val title = URLDecoder.decode(rawTitle, "utf-8")
-                extractInfo(id, title) ?: FoodInfo(
+                extractInfo(id, title) ?: FoodEntity(
                     title = title,
                     imgRes = backupImages[index],
                     portions = listOf(backupStats[index].first),
@@ -70,7 +76,7 @@ class FoodRepository constructor(private val service: NutracheckService) {
         }
     }
 
-    private suspend fun extractInfo(productId: String, productTitle: String): FoodInfo? {
+    private suspend fun extractInfo(productId: String, productTitle: String): FoodEntity? {
         Timber.i("Extracting info, id = $productId, title = $productTitle")
         return try {
             val response = service.getProductInfo(
@@ -148,7 +154,7 @@ class FoodRepository constructor(private val service: NutracheckService) {
                 .slice(srcSplit.lastIndex-1 until srcSplit.size)
                 .joinToString("/")
 
-            FoodInfo(
+            FoodEntity(
                 title = productTitle,
                 imgRes = imgRes,
                 portions = portions,

@@ -17,7 +17,7 @@ interface LogsDAO {
 
     // GROUP BY category
     @Query("SELECT * FROM logs WHERE date = :date")
-    fun getToday(date: String): Flow<List<LogsEntity>>
+    fun getByDate(date: String): Flow<List<LogsEntity>>
 
     @Insert(onConflict = REPLACE)
     suspend fun insertAll(entries: List<LogsEntity>)

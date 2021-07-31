@@ -1,8 +1,7 @@
-package com.example.nutritrack.data.local
+package com.example.nutritrack.data.state
 
 import com.example.nutritrack.data.model.LogsEntity
 import com.example.nutritrack.util.DailyLog
-import com.example.nutritrack.util.LogEntry
 import com.example.nutritrack.util.MealCategory
 
 data class DiaryViewState(

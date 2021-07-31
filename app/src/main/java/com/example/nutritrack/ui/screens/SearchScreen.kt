@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -25,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -38,13 +41,11 @@ import coil.compose.ImagePainter
 import coil.compose.rememberImagePainter
 import com.example.nutritrack.R
 import com.example.nutritrack.api.NutracheckService
-import com.example.nutritrack.data.local.SearchViewState
-import com.example.nutritrack.data.local.fakeSearchData
-import com.example.nutritrack.data.remote.FoodInfo
+import com.example.nutritrack.data.state.SearchViewState
+import com.example.nutritrack.data.state.fakeSearchData
+import com.example.nutritrack.data.model.FoodEntity
 import com.example.nutritrack.ui.theme.NutriTrackTheme
-import com.example.nutritrack.util.FoodResource
 import com.example.nutritrack.util.LogEntry
-import com.example.nutritrack.util.MealCategory
 import com.example.nutritrack.util.RemoteResource
 import com.example.nutritrack.viewmodels.SearchViewModel
 import timber.log.Timber
@@ -83,67 +84,83 @@ fun SearchScreenHoist(
 ) {
     val searchResults = state.searchResults
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .padding(16.dp)
-            .fillMaxSize()
-    ) {
-        SearchBar(onSearch = {
-            onSearch(it, NutracheckService.FIRST_PAGE, false) }
-        )
+    Column(modifier = Modifier.fillMaxSize()) {
+        TopAppBar {
+            Box (
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                LoadedEntries(
+                    modifier = Modifier.align(Alignment.CenterStart),
+                    count = state.loadedEntries
+                )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        when (searchResults) {
-            is RemoteResource.Loading -> {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
+                SearchBar(
+                    onSearch = { onSearch(it, NutracheckService.FIRST_PAGE, false) },
+                    modifier = Modifier
+                        .padding(vertical = 8.dp)
+                        .fillMaxWidth(0.65f)
+                        .fillMaxHeight()
+//                        .align(Alignment.Center)
+                )
+            }
+        }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxSize()
+        ) {
+            when (searchResults) {
+                is RemoteResource.Loading -> {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
 //                    Text(
 //                        text = "Loading",
 //                        fontSize = 20.sp,
 //                        color = Color.LightGray
 //                    )
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(150.dp)
-                    )
-                }
-            }
-            is RemoteResource.Error -> {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "${searchResults.message}... ☹️",
-                            fontSize = 20.sp,
-                            textAlign = TextAlign.Center
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(150.dp)
                         )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        OutlinedButton(
-                            onClick = { onSearch(null, state.currentPage, true) }
+                    }
+                }
+                is RemoteResource.Error -> {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("Try Again?")
+                            Text(
+                                text = "${searchResults.message}... ☹️",
+                                fontSize = 20.sp,
+                                textAlign = TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            OutlinedButton(
+                                onClick = { onSearch(null, state.currentPage, true) }
+                            ) {
+                                Text("Try Again?")
+                            }
                         }
                     }
                 }
-            }
-            is RemoteResource.Success -> {
-                FoodList(
-                    state = state,
-                    onSearch = { onSearch(null, it, true) },
-                    onSelectItem = onSelectItem,
-                    onUpdateQuantity = onUpdateQuantity,
-                    onMoreUnits = onToggleUnitMenu,
-                    onAddItem = onAddItem
-                )
+                is RemoteResource.Success -> {
+                    FoodList(
+                        state = state,
+                        onSearch = { onSearch(null, it, true) },
+                        onSelectItem = onSelectItem,
+                        onUpdateQuantity = onUpdateQuantity,
+                        onMoreUnits = onToggleUnitMenu,
+                        onAddItem = onAddItem
+                    )
+                }
             }
         }
     }
@@ -166,6 +183,7 @@ fun SearchScreenHoist(
 
 @Composable
 fun SearchBar(
+    modifier: Modifier = Modifier,
     onSearch: (String) -> Unit
 ) {
     // TODO(Why doesn't this not save?)
@@ -173,18 +191,53 @@ fun SearchBar(
     //var noSearchResults by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
-    OutlinedTextField(
+    val colors = TextFieldDefaults.textFieldColors(
+        backgroundColor = Color.White,
+        textColor = Color.Black
+    )
+
+    val style = TextStyle.Default.copy(
+    )
+
+    BasicTextField(
         value = text,
+        textStyle = style,
         onValueChange = { text = it },
-        label = { Text("Search") },
         singleLine = true,
         keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = {
             focusManager.clearFocus()
             onSearch(text)
         }),
-        // isError = noSearchResults,
-        modifier = Modifier.fillMaxWidth()
+        decorationBox = { innerText ->
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                modifier = modifier
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .weight(0.8f)
+                        ) {
+                            innerText()
+                        }
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "Search Icon",
+                            modifier = Modifier.weight(0.2f)
+                        )
+                    }
+                }
+            }
+        }
     )
 }
 
@@ -201,7 +254,7 @@ fun FoodList(
     @Suppress("UNCHECKED_CAST")
     val foodList = (
         state.searchResults
-        as RemoteResource.Success<List<FoodInfo>>
+        as RemoteResource.Success<List<FoodEntity>>
     ).data
 
     if (foodList.isEmpty()) {
@@ -225,7 +278,7 @@ fun FoodList(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 FoodCard(
-                    foodInfo = data,
+                    foodEntity = data,
                     selectedUnit = state.selectedUnit,
                     expanded = index == state.selectedItem,
                     currentQuantity = state.quantity,
@@ -278,6 +331,8 @@ fun FoodList(
                         Text("Next")
                     }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
             }
 //        if () {
 //            item {
@@ -294,7 +349,7 @@ fun FoodList(
 
 @Composable
 fun FoodCard(
-    foodInfo: FoodInfo,
+    foodEntity: FoodEntity,
     selectedUnit: Int,
     currentQuantity: Float,
     expanded: Boolean = false,
@@ -329,11 +384,11 @@ fun FoodCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(modifier = Modifier.weight(0.4f)) {
-                    FoodImage(imgRes = foodInfo.imgRes)
+                    FoodImage(imgRes = foodEntity.imgRes)
                 }
 
                 Text(
-                    text = foodInfo.title,
+                    text = foodEntity.title,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
@@ -351,12 +406,12 @@ fun FoodCard(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ){
                     QuantityField(
-                        units = foodInfo.portions,
+                        units = foodEntity.portions,
                         selectedUnit = selectedUnit,
                         currentQuantity = currentQuantity,
                         onValueChange = onUpdateQuantity,
                         onClickMore = onMoreUnits,
-                        onAddItem = { onAddItem(Pair(foodInfo.title, kcal)) }
+                        onAddItem = { onAddItem(Pair(foodEntity.title, kcal)) }
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -705,7 +760,7 @@ fun SearchScreenPreview() {
 
             val foodInfo = (
                 state.searchResults
-                as RemoteResource.Success<List<FoodInfo>>
+                as RemoteResource.Success<List<FoodEntity>>
             ).data.getOrNull(state.selectedItem)
 
             state = state.copy(

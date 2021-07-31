@@ -33,11 +33,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.nutritrack.data.local.DiaryViewState
+import com.example.nutritrack.data.state.DiaryViewState
 import com.example.nutritrack.data.model.LogsEntity
 import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.ui.theme.mealCategoryColors
 import com.example.nutritrack.util.LogEntry
+import com.example.nutritrack.util.MILLIS_IN_DAY
 import com.example.nutritrack.util.MealCategory
 import com.example.nutritrack.viewmodels.DiaryViewModel
 import com.example.nutritrack.viewmodels.SearchViewModel
@@ -48,10 +49,13 @@ fun DiaryScreenContent(
     diaryViewModel: DiaryViewModel,
     searchViewModel: SearchViewModel
 ) {
-    val state by diaryViewModel.viewState.collectAsState()
+    val diaryState by diaryViewModel.viewState.collectAsState()
+    val searchState by searchViewModel.viewState.collectAsState()
 
     DiaryScreenHoist(
-        state = state,
+        state = diaryState,
+        loadedEntries = searchState.loadedEntries,
+        onChangeDate = diaryViewModel::changeDate,
         onAddEntry = { category ->
             val entries = searchViewModel.pasteLogEntry()
 
@@ -64,7 +68,7 @@ fun DiaryScreenContent(
                             category = category,
                             title = title,
                             kcal = kcal,
-                            date = state.displayDate
+                            date = diaryState.displayDate
                         ),
                         add = true
                     )
@@ -73,14 +77,14 @@ fun DiaryScreenContent(
             // diaryViewModel.addLogEntry(it, Pair("Testing", 500.0f))
         },
         onQuickAddEntry = { entry ->
-            state.selectedCategory?.let { category ->
+            diaryState.selectedCategory?.let { category ->
                 if (entry != null) {
                     diaryViewModel.updateLog(
                         entity = LogsEntity(
                             category = category,
                             title = entry.first,
                             kcal = entry.second,
-                            date = state.displayDate
+                            date = diaryState.displayDate
                         ),
                         add = true
                     )
@@ -97,26 +101,34 @@ fun DiaryScreenContent(
 @Composable
 fun DiaryScreenHoist(
     state: DiaryViewState,
-    onChangeDate: (Int) -> Unit,
+    loadedEntries: Int,
+    onChangeDate: (Long) -> Unit,
     onAddEntry: (MealCategory) -> Unit,
     onQuickAddEntry: (LogEntry?) -> Unit,
     onRemoveEntry: (LogsEntity) -> Unit,
     onLongPressEntry: (Long) -> Unit
 ) {
-    Column {
+    Column (modifier = Modifier.fillMaxSize()) {
         TopAppBar {
             Box(
                 modifier = Modifier.fillMaxSize()
             ) {
+                LoadedEntries(
+                    modifier = Modifier.align(Alignment.CenterStart),
+                    count = loadedEntries
+                )
+
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = CenterVertically,
                     modifier = Modifier.align(Center)
                 ) {
 
                     Icon(
                         imageVector = Icons.Filled.ArrowBack,
                         contentDescription = "Go back by 1 day",
-                        modifier = Modifier.clickable { onChangeDate(-1) }
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clickable { onChangeDate(-MILLIS_IN_DAY) }
                     )
 
                     Column (
@@ -131,7 +143,8 @@ fun DiaryScreenHoist(
                             )
                         }
                         Row (
-                            verticalAlignment = CenterVertically
+                            verticalAlignment = CenterVertically,
+                            modifier = Modifier.clickable{ onChangeDate(0) }
                         ){
                             Icon(
                                 imageVector = Icons.Filled.CalendarToday,
@@ -149,9 +162,10 @@ fun DiaryScreenHoist(
                         contentDescription = "Go forward by 1 day",
                         modifier = Modifier
                             .alpha(if (state.isToday) 0.25f else 1.0f)
+                            .size(30.dp)
                             .clickable {
                                 if (!state.isToday) {
-                                    onChangeDate(1)
+                                    onChangeDate(MILLIS_IN_DAY)
                                 }
                             }
                     )
@@ -162,7 +176,6 @@ fun DiaryScreenHoist(
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = CenterHorizontally,
             modifier = Modifier
-                .padding(16.dp)
                 .fillMaxSize()
         ) {
             // TODO(Label the columns)
@@ -171,7 +184,7 @@ fun DiaryScreenHoist(
             LazyColumn(
                 horizontalAlignment = CenterHorizontally,
                 modifier = Modifier
-                    .padding(16.dp)
+//                    .padding(16.dp)
                     .weight(0.9f)
             ) {
                 state.currentLog.forEach { meal ->
@@ -180,6 +193,8 @@ fun DiaryScreenHoist(
                     val color = mealCategoryColors.getOrElse(category) { Color.Gray }
 
                     item {
+                        Spacer(modifier = Modifier.height(8.dp))
+
                         Surface(
                             shape = RoundedCornerShape(5.dp),
                             color = color.copy(alpha = 0.5f),
@@ -211,12 +226,11 @@ fun DiaryScreenHoist(
                             }
                         }
 
-
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Box(
                             modifier = Modifier
-                                .padding(4.dp)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                                 .defaultMinSize(minHeight = 50.dp)
                                 .fillMaxWidth()
                                 .border(
@@ -308,7 +322,7 @@ fun DiaryScreenHoist(
             }
 
             Divider(
-                thickness = 5.dp,
+                thickness = 3.dp,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -364,9 +378,7 @@ fun FullscreenQuickAddMenu(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight(0.6f)
-                    .background(
-                        if (isSystemInDarkTheme()) Color.Black else Color.White
-                    )
+                    .background(color = Color.White)
             ) {
                 OutlinedTextField(
                     value = titleText,
@@ -486,6 +498,8 @@ fun DiaryScreenPreview() {
             ) {
                 DiaryScreenHoist(
                     state = state,
+                    loadedEntries = 0,
+                    onChangeDate = {},
                     onAddEntry = {},
                     onQuickAddEntry = {},
                     onRemoveEntry = {},

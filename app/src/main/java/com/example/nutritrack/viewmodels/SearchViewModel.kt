@@ -3,7 +3,7 @@ package com.example.nutritrack.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nutritrack.data.FoodRepository
-import com.example.nutritrack.data.local.SearchViewState
+import com.example.nutritrack.data.state.SearchViewState
 import com.example.nutritrack.util.LogEntry
 import com.example.nutritrack.util.RemoteResource
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +21,7 @@ class SearchViewModel(private val repo: FoodRepository) : ViewModel() {
     private var _previousQuery: String? = null
     private var _fetchJob: Job? = null
 
-    private var _loadedEntry = mutableListOf<LogEntry>()
+    private var _loadedEntries = mutableListOf<LogEntry>()
 
     fun selectItem(foodItem: Int) {
         if (_viewState.value.selectedItem != foodItem) {
@@ -95,12 +95,18 @@ class SearchViewModel(private val repo: FoodRepository) : ViewModel() {
     }
 
     fun copyLogEntry(entry: LogEntry) {
-        _loadedEntry.add(entry)
+        _loadedEntries.add(entry)
+        _viewState.value = _viewState.value.copy(
+            loadedEntries = _loadedEntries.size
+        )
     }
 
     fun pasteLogEntry(): List<LogEntry> {
-        val entry = listOf(*_loadedEntry.toTypedArray())
-        _loadedEntry.clear()
+        val entry = listOf(*_loadedEntries.toTypedArray())
+        _loadedEntries.clear()
+        _viewState.value = _viewState.value.copy(
+            loadedEntries = 0
+        )
         return entry
     }
 }

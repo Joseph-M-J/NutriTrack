@@ -1,21 +1,16 @@
 package com.example.nutritrack.viewmodels
 
-import androidx.compose.runtime.toMutableStateMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.nutritrack.data.local.DiaryViewState
+import com.example.nutritrack.data.state.DiaryViewState
 import com.example.nutritrack.data.model.AppDatabase
 import com.example.nutritrack.data.model.LogsEntity
 import com.example.nutritrack.util.DailyLog
 import com.example.nutritrack.util.MealCategory
-import com.example.nutritrack.util.testLog
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -24,25 +19,24 @@ class DiaryViewModel(private val db: AppDatabase): ViewModel() {
     private val _viewState = MutableStateFlow(DiaryViewState())
     val viewState: StateFlow<DiaryViewState> = _viewState
 
-    private val logsDAO = db.logsDAO()
+    private var _logsJob: Job? = null
+    private val _logsDAO = db.logsDAO()
 
-    private var day: Int = -1
-    private var month: Int = -1
-    private var year: Int = -1
+    private val _fmt = SimpleDateFormat.getDateInstance(
+        SimpleDateFormat.SHORT
+    )
+
+    // milliseconds
+    private var _todayMillis: Long = Date().time
+    private var _currentMillis = _todayMillis
 
     init {
-        val fmt = SimpleDateFormat.getDateInstance(SimpleDateFormat.SHORT)
-        val date = fmt.format(Date())
-        val dateSplit = date.split("/")
-        day = dateSplit[1].toInt()
-        month = dateSplit[0].toInt()
-        year = dateSplit[2].toInt()
-
         _viewState.value = _viewState.value.copy(
-            displayDate = "$day/$month/$year",
+            displayDate = millisToDisplayDate(_todayMillis),
             isToday = true
         )
 
+//
         /**** INIT WITH TEST DATA ****/
 //        runBlocking {
 //            logsDAO.insertAll(
@@ -58,11 +52,15 @@ class DiaryViewModel(private val db: AppDatabase): ViewModel() {
 //                }
 //            )
 //        }
-
-        viewModelScope.launch(Dispatchers.IO) {
+        watchLogs()
+    }
+    private fun watchLogs() {
+        _logsJob?.cancel()
+        _logsJob = viewModelScope.launch(Dispatchers.IO) {
 
             // The Flow returned by Room will be continuously collected!
-            logsDAO.getToday(date).collect { entities ->
+//            _logsDAO.getAll().collect { entities ->
+            _logsDAO.getByDate(_viewState.value.displayDate).collect { entities ->
 
                 val log = MealCategory.values().map {
                     it to mutableListOf<LogsEntity>()
@@ -83,8 +81,20 @@ class DiaryViewModel(private val db: AppDatabase): ViewModel() {
         }
     }
 
-    fun changeDate() {
+    fun changeDate(deltaMillis: Long) {
+        if (deltaMillis == 0L) {
+            _todayMillis = Date().time
+            _currentMillis = _todayMillis
+        } else {
+            _currentMillis += deltaMillis
+        }
 
+        _viewState.value = _viewState.value.copy(
+            displayDate = millisToDisplayDate(_currentMillis),
+            isToday = _currentMillis == _todayMillis
+        )
+
+        watchLogs()
     }
 
     fun selectEntity(id: Long) {
@@ -96,9 +106,9 @@ class DiaryViewModel(private val db: AppDatabase): ViewModel() {
     fun updateLog(entity: LogsEntity, add: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             if (add) {
-                logsDAO.save(entity)
+                _logsDAO.save(entity)
             } else {
-                logsDAO.delete(entity)
+                _logsDAO.delete(entity)
             }
         }
         /*val entries = _viewState.value.currentLog.getOrElse(category) { emptyList() }
@@ -130,6 +140,13 @@ class DiaryViewModel(private val db: AppDatabase): ViewModel() {
         return log.map {
             it.key to it.value.map{ entity -> entity.kcal }.sum()
         }.toMap()
+    }
+
+    private fun millisToDisplayDate(millis: Long): String {
+        return _fmt.format(millis)
+//        Timber.i(date)
+//        val dateSplit = date.split("/")
+//        return "${dateSplit[1]}/${dateSplit[0]}/${dateSplit[2]}"
     }
 
     fun toggleQuickAddMenu(category: MealCategory) {

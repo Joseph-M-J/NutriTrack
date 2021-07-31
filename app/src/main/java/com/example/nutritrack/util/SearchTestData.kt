@@ -1,9 +1,9 @@
-package com.example.nutritrack.data.local
+package com.example.nutritrack.data.state
 
-import com.example.nutritrack.data.remote.FoodInfo
+import com.example.nutritrack.data.model.FoodEntity
 
 val fakeSearchData = listOf(
-    FoodInfo(
+    FoodEntity(
         title = "Asda 50% Less Fat Mature Grated British Cheese 200g",
         imgRes = "13/681013.png",
         portions = listOf("100g", "25g Serving"),
@@ -12,7 +12,7 @@ val fakeSearchData = listOf(
         carbs = listOf(1.7f, 0.4f),
         fat = listOf(17.0f, 4.2f)
     ),
-    FoodInfo(
+    FoodEntity(
         title = "Asda Shredded Iceberg Lettuce 130g",
         imgRes = "88/751988.png",
         portions = listOf("100g", "1/2 pack"),
@@ -21,7 +21,7 @@ val fakeSearchData = listOf(
         carbs = listOf(2.0f, 1.3f),
         fat = listOf(0.5f, 0.3f)
     ),
-    FoodInfo(
+    FoodEntity(
         title = "Asda Semi Skimmed British Milk 2272ml",
         imgRes = "93/565893.png",
         portions = listOf("40ml for Tea/Coffee", "100ml", "125ml for Cereal"),

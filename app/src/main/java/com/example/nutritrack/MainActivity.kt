@@ -1,5 +1,7 @@
 package com.example.nutritrack
 
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,7 +24,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.nutritrack.data.FoodRepository
 import com.example.nutritrack.modules.AppModule
+import com.example.nutritrack.receivers.DateReceiver
 import com.example.nutritrack.ui.screens.DiaryScreenContent
+import com.example.nutritrack.ui.screens.FavoritesScreenContent
 import com.example.nutritrack.ui.screens.SearchScreenContent
 import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.viewmodels.DiaryViewModel
@@ -51,9 +55,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private lateinit var receiver: DateReceiver
+
     @ExperimentalFoundationApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        receiver = DateReceiver()
+
+        IntentFilter(Intent.ACTION_DATE_CHANGED).also {
+            registerReceiver(receiver, it)
+        }
+
         setContent {
             MainContent(
                 searchViewModel = searchViewModel,
@@ -127,7 +140,9 @@ fun MainNavHost(
         }
 
         composable(Screen.Saved.name) {
-            Text("Temp")
+            FavoritesScreenContent(
+                searchViewModel = searchViewModel
+            )
         }
 
         composable(Screen.Profile.name) {

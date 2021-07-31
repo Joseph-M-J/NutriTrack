@@ -1,15 +1,32 @@
-package com.example.nutritrack.data.remote
+package com.example.nutritrack.data.model
 
-data class FoodInfo(
-    val title:  String = "Missing Entry",
-    val imgRes: String? = null,
-    val portions: List<String> = emptyList(),
-    val kcal:     List<Float>  = emptyList(),
-    val protein:  List<Float>  = emptyList(),
-    val carbs:    List<Float>  = emptyList(),
-    val fat:      List<Float>  = emptyList()
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import com.example.nutritrack.util.MealCategory
+
+@Entity(tableName = "favorites")
+data class FoodEntity(
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "id") val id: Long = 0,
+
+    @ColumnInfo(name = "title") val title: String = "Missing Entry",
+
+    @ColumnInfo(name = "img_res") val imgRes: String? = null,
+
+    @ColumnInfo(name = "category") val category: MealCategory? = null,
+
+    @ColumnInfo(name = "portions_list") val portions: List<String> = emptyList(),
+
+    @ColumnInfo(name = "kcal_list") val kcal: List<Float> = emptyList(),
+
+    @ColumnInfo(name = "protein_list") val protein: List<Float> = emptyList(),
+
+    @ColumnInfo(name = "carbs_list") val carbs: List<Float> = emptyList(),
+
+    @ColumnInfo(name = "fat_list") val fat: List<Float> = emptyList()
 ) {
-    fun generatePortions(): FoodInfo {
+    fun generatePortions(): FoodEntity {
         val newPortions = portions.toMutableList()
         val newKcal     = kcal.toMutableList()
         val newProtein  = protein.toMutableList()
@@ -38,14 +55,14 @@ data class FoodInfo(
             }
         }
 
-        return FoodInfo(
-            title,
-            imgRes,
-            newPortions,
-            newKcal,
-            newProtein,
-            newCarbs,
-            newFat
+        return FoodEntity(
+            title = title,
+            imgRes = imgRes,
+            portions = newPortions,
+            kcal = newKcal,
+            protein = newProtein,
+            carbs = newCarbs,
+            fat = newFat
         )
     }
 
