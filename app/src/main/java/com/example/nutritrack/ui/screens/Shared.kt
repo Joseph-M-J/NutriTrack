@@ -30,6 +30,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -197,8 +199,15 @@ fun FoodCard(
     val displayKcal = foodEntity.kcal[selectedUnit] * quantity
 
     Card(
-        shape = RoundedCornerShape(topEnd = 40.dp),
-        elevation = 15.dp,
+        shape = RoundedCornerShape(bottomStart = 30.dp, topEnd = 45.dp),
+        border = BorderStroke(
+            width = 3.dp,
+            brush = Brush.verticalGradient(
+                colors = listOf(Color.Transparent, Color.LightGray),
+                startY = 0.0f,
+                endY = 40.0f
+            )),
+        elevation = 8.dp,
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onSelected() }
@@ -242,6 +251,7 @@ fun FoodCard(
                 ){
                     PortionScaleRow(
                         units = foodEntity.portions,
+                        quantity = quantity,
                         onUpdateQuantity = { quantity = it },
                         selectedUnit = selectedUnit,
                         onUpdateSelectedUnit = { selectedUnit = it },
@@ -429,6 +439,7 @@ fun FoodImage(imgRes: String?) {
 @Composable
 fun PortionScaleRow(
     units: List<String>,
+    quantity: Float,
     onUpdateQuantity: (Float) -> Unit,
     selectedUnit: Int,
     onUpdateSelectedUnit: (Int) -> Unit,
@@ -461,6 +472,7 @@ fun PortionScaleRow(
                 contentAlignment = Alignment.Center
             ){
                 QuantityUnitField(
+                    quantity = quantity,
                     unit = portion,
                     maximiseUnit = maximiseUnit,
                     onUpdate = onUpdateQuantity,
@@ -530,12 +542,14 @@ fun PortionScaleRow(
 @ExperimentalAnimationApi
 @Composable
 fun QuantityUnitField(
+    quantity: Float,
     unit: String,
     maximiseUnit: Boolean,
     onUpdate: (Float) -> Unit,
     onDone: () -> Unit
 ) {
-    var text by rememberSaveable { mutableStateOf("1") }
+    val rawText = quantity.toString()
+    var text by rememberSaveable { mutableStateOf(if (rawText == "1.0") "1" else rawText) }
 
     var valid by rememberSaveable { mutableStateOf(true) }
     var errorMessage by rememberSaveable { mutableStateOf("") }
@@ -561,14 +575,16 @@ fun QuantityUnitField(
             text = it
 
             valid = try {
-                val quantity = it.toFloat()
-                if (quantity > 10_000) {
+                val _quantity = it.toFloat()
+
+                if (_quantity > 10_000) {
                     throw IllegalArgumentException("Too Large")
                 }
-                if (quantity <= 0) {
+                if (_quantity <= 0) {
                     throw IllegalArgumentException("Too Small")
                 }
-                onUpdate(quantity)
+
+                onUpdate(_quantity)
                 errorMessage = ""
                 true
 
@@ -716,7 +732,7 @@ fun QuantityUnitField(
 
 @ExperimentalCoilApi
 @ExperimentalAnimationApi
-@Preview
+@Preview(showBackground = true)
 @Composable
 fun PreviewFoodList() {
     FoodList(
