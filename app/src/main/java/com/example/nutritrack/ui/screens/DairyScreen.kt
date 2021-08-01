@@ -478,34 +478,34 @@ fun FullscreenQuickAddMenu(
 }
 
 
-@ExperimentalFoundationApi
-@Preview
-@Composable
-fun DiaryScreenPreview() {
-    var state by remember { mutableStateOf(DiaryViewState(
-        displayDate = "30/07/21",
-        isToday = true
-    ))}
-    NutriTrackTheme {
-        Scaffold(
-            bottomBar = { BottomNavigation {} }
-        ) { innerPadding ->
-
-            Box(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize()
-            ) {
-                DiaryScreenHoist(
-                    state = state,
-                    loadedEntries = 0,
-                    onChangeDate = {},
-                    onAddEntry = {},
-                    onQuickAddEntry = {},
-                    onRemoveEntry = {},
-                    onLongPressEntry = {}
-                )
-            }
-        }
-    }
-}
+//@ExperimentalFoundationApi
+//@Preview
+//@Composable
+//fun DiaryScreenPreview() {
+//    var state by remember { mutableStateOf(DiaryViewState(
+//        displayDate = "30/07/21",
+//        isToday = true
+//    ))}
+//    NutriTrackTheme {
+//        Scaffold(
+//            bottomBar = { BottomNavigation {} }
+//        ) { innerPadding ->
+//
+//            Box(
+//                modifier = Modifier
+//                    .padding(innerPadding)
+//                    .fillMaxSize()
+//            ) {
+//                DiaryScreenHoist(
+//                    state = state,
+//                    loadedEntries = 0,
+//                    onChangeDate = {},
+//                    onAddEntry = {},
+//                    onQuickAddEntry = {},
+//                    onRemoveEntry = {},
+//                    onLongPressEntry = {}
+//                )
+//            }
+//        }
+//    }
+//}

@@ -30,6 +30,7 @@ import com.example.nutritrack.ui.screens.FavoritesScreenContent
 import com.example.nutritrack.ui.screens.SearchScreenContent
 import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.viewmodels.DiaryViewModel
+import com.example.nutritrack.viewmodels.FavoritesViewModel
 import com.example.nutritrack.viewmodels.SearchViewModel
 import timber.log.Timber
 
@@ -44,11 +45,23 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
     private val diaryViewModel: DiaryViewModel by viewModels {
         object : ViewModelProvider.Factory {
             override fun <T: ViewModel?> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
                 return DiaryViewModel(
+                    AppModule.provideAppDatabase(applicationContext)
+                ) as T
+            }
+        }
+    }
+
+    private val favoritesViewModel: FavoritesViewModel by viewModels {
+        object : ViewModelProvider.Factory {
+            override fun <T: ViewModel?> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return FavoritesViewModel(
                     AppModule.provideAppDatabase(applicationContext)
                 ) as T
             }
@@ -63,14 +76,15 @@ class MainActivity : ComponentActivity() {
 
         receiver = DateReceiver()
 
-        IntentFilter(Intent.ACTION_DATE_CHANGED).also {
-            registerReceiver(receiver, it)
-        }
+//        IntentFilter(Intent.ACTION_DATE_CHANGED).also {
+//            registerReceiver(receiver, it)
+//        }
 
         setContent {
             MainContent(
                 searchViewModel = searchViewModel,
-                diaryViewModel = diaryViewModel
+                diaryViewModel = diaryViewModel,
+                favoritesViewModel = favoritesViewModel
             )
         }
     }
@@ -84,7 +98,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainContent(
     searchViewModel: SearchViewModel,
-    diaryViewModel: DiaryViewModel
+    diaryViewModel: DiaryViewModel,
+    favoritesViewModel: FavoritesViewModel
 ) {
     val navController = rememberNavController()
 
@@ -100,6 +115,7 @@ fun MainContent(
             MainNavHost(
                 searchViewModel = searchViewModel,
                 diaryViewModel = diaryViewModel,
+                favoritesViewModel = favoritesViewModel,
                 navController = navController,
                 modifier = Modifier.padding(pad)
             )
@@ -112,6 +128,7 @@ fun MainContent(
 fun MainNavHost(
     searchViewModel: SearchViewModel,
     diaryViewModel: DiaryViewModel,
+    favoritesViewModel: FavoritesViewModel,
     modifier: Modifier,
     navController: NavHostController,
 ) {
@@ -130,17 +147,13 @@ fun MainNavHost(
 
         composable(Screen.Search.name) {
             SearchScreenContent(
-                searchViewModel = searchViewModel,
-                onAddItem = {
-                    Timber.i("Adding: $it")
-//                    MainActivity.currentScreen = Screen.Diary
-//                    navController.navigate(Screen.Diary.name)
-                }
+                searchViewModel = searchViewModel
             )
         }
 
         composable(Screen.Saved.name) {
             FavoritesScreenContent(
+                favoritesViewModel = favoritesViewModel,
                 searchViewModel = searchViewModel
             )
         }
@@ -177,14 +190,14 @@ fun MainNavBar(
     }
 }
 
-@Preview
-@Composable
-fun DefaultPreview() {
-    NutriTrackTheme {
-        Scaffold(
-            bottomBar = { MainNavBar(onNavigate = {_->}) }
-        ) {
-            Text("Main content")
-        }
-    }
-}
+//@Preview
+//@Composable
+//fun DefaultPreview() {
+//    NutriTrackTheme {
+//        Scaffold(
+//            bottomBar = { MainNavBar(onNavigate = {_->}) }
+//        ) {
+//            Text("Main content")
+//        }
+//    }
+//}

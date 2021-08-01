@@ -9,10 +9,10 @@ interface FoodDAO {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun save(entry: FoodEntity)
 
-    @Query("SELECT * FROM favorites")
+    @Query("SELECT * FROM food")
     fun getAll(): Flow<List<FoodEntity>>
 
-    @Query("SELECT * FROM favorites WHERE category = :category")
+    @Query("SELECT * FROM food WHERE category = :category")
     fun getByCategory(category: MealCategory): Flow<List<FoodEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
