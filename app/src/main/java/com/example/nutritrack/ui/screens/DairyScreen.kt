@@ -202,7 +202,7 @@ fun DiaryScreenHoist(
 
                         Surface(
                             shape = RoundedCornerShape(5.dp),
-                            color = color.copy(alpha = 0.5f),
+                            color = color.copy(alpha = 0.85f),
                             modifier = Modifier
                                 .height(30.dp)
                                 .fillMaxWidth(0.5f)
@@ -224,8 +224,8 @@ fun DiaryScreenHoist(
                                     .fillMaxSize()
                             ) {
                                 Text(
-                                    text = category.name,
-                                    color = Color.Black,
+                                    text = category.displayName,
+                                    color = Color.White,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -441,7 +441,7 @@ fun FullscreenQuickAddMenu(
                         }
                     },
                     keyboardOptions = KeyboardOptions.Default.copy(
-                        keyboardType = KeyboardType.Number,
+//                        keyboardType = KeyboardType.Number,
                         imeAction = ImeAction.Done
                     ),
                     keyboardActions = KeyboardActions(onDone = {

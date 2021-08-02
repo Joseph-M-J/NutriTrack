@@ -14,7 +14,7 @@ import java.io.File
         FoodEntity::class,
         FavoritesEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

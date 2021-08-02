@@ -20,7 +20,9 @@ data class FavoritesEntity(
 
     @ColumnInfo(name = "food_img_res") val imgRes: String,
 
-    @ColumnInfo(name = "category") val category: MealCategory
+    @ColumnInfo(name = "category") val category: MealCategory,
+
+//    @ColumnInfo(name = "date") val date: String
 )
 
 //data class FoodAndFavorites(

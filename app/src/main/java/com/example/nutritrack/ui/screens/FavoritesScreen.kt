@@ -15,12 +15,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.annotation.ExperimentalCoilApi
 import com.example.nutritrack.data.model.FoodEntity
 import com.example.nutritrack.data.state.FavoritesViewState
 import com.example.nutritrack.data.state.SearchViewState
+import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.ui.theme.mealCategoryColors
 import com.example.nutritrack.util.FoodPreset
 import com.example.nutritrack.util.MealCategory
@@ -84,7 +86,7 @@ fun FavoritesScreenHoist(
                                 .size(25.dp)
                         )
                         Text(
-                            text = "Leave ${favoritesState.selectedCategory.name}",
+                            text = "Leave ${favoritesState.selectedCategory.displayName}",
                             fontSize = 20.sp,
                             color = Color.White,
                             modifier = Modifier.padding(horizontal = 8.dp)
@@ -173,8 +175,8 @@ fun CategoryTile(
                 modifier = Modifier.align(Alignment.Center)
             ){
                 Text(
-                    text = category.name,
-                    fontSize = 22.sp,
+                    text = category.displayName.replace(" ", "\n"),
+                    fontSize = 20.sp,
                     color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
@@ -183,7 +185,7 @@ fun CategoryTile(
 
                 Text(
                     text = itemCount.toString(),
-                    fontSize = 25.sp,
+                    fontSize = 20.sp,
                     color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
@@ -192,31 +194,31 @@ fun CategoryTile(
     }
 }
 
-//@Preview
-//@Composable
-//fun PreviewFavoritesScreen() {
-//    val state by remember { mutableStateOf(FavoritesViewState(
-//
-//    ))}
-//
-//    NutriTrackTheme {
-//        Scaffold(
-//            bottomBar = { BottomNavigation {} }
-//        ) { innerPadding ->
-//
-//            Box(
-//                modifier = Modifier
-//                    .padding(innerPadding)
-//                    .fillMaxSize()
-//            ) {
-//                FavoritesScreenHoist(
-//                    favoritesState = state,
-//                    loadedEntries = 0,
-//                    onSelectCategory = {},
-//                    searchState = SearchViewState(),
-//                    on
-//                )
-//            }
-//        }
-//    }
-//}
+@ExperimentalCoilApi
+@ExperimentalAnimationApi
+@ExperimentalFoundationApi
+@Preview
+@Composable
+fun PreviewFavoritesScreen() {
+    NutriTrackTheme {
+        Scaffold(
+            bottomBar = { BottomNavigation {} }
+        ) { innerPadding ->
+
+            Box(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+            ) {
+                FavoritesScreenHoist(
+                    favoritesState = FavoritesViewState(),
+                    searchState = SearchViewState(),
+                    loadedEntries = 0,
+                    onSelectCategory = {},
+                    onAddItem = {},
+                    onDeleteItem = {_,_ -> }
+                )
+            }
+        }
+    }
+}
