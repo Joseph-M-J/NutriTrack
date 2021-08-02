@@ -20,7 +20,7 @@ Webscraping nutracheck with JSoup (String parsing, CSS selectors, DOM, tags, cla
 
 Lazy loading with paging 3.0 (page sizing, virtual paging).
 
-Database with Room 2.3.0 (Entity, Dao, Database, Typeconverters, Foreign keys)
+Database with Room 2.3.0 (Entity, Dao, Database, Typeconverters, SQL, Foreign keys (cascade delete))
 
 Dependancy injection with Hilt/Dagger (Injection scope i.e Singleton, activity, fragment, navGraph)
 
@@ -55,6 +55,8 @@ Unidirectional state with declaritive compose UI.
 Composables and previews.
 
 Composable recomposition (mutableStateOf to watch for data changes)
+
+Stateful composables for modularity and testability with rememberSaveable.
 
 State hoisting in composables for testability.
 
