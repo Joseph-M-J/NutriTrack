@@ -5,10 +5,7 @@ import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -23,14 +20,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
@@ -42,7 +35,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.annotation.ExperimentalCoilApi
@@ -51,8 +43,7 @@ import coil.compose.rememberImagePainter
 import com.example.nutritrack.R
 import com.example.nutritrack.api.NutracheckService
 import com.example.nutritrack.data.model.FoodEntity
-import com.example.nutritrack.data.state.fakeSearchData
-import com.example.nutritrack.util.LogEntry
+import com.example.nutritrack.util.FoodPreset
 import timber.log.Timber
 import kotlin.math.abs
 import kotlin.math.sign
@@ -86,6 +77,7 @@ fun LoadedEntries(
     }
 }
 
+@ExperimentalFoundationApi
 @ExperimentalCoilApi
 @ExperimentalAnimationApi
 @Composable
@@ -94,9 +86,11 @@ fun FoodList(
     hasNextPage: Boolean,
     currentPage: Int,
     onChangePage: (Int) -> Unit,
-    onAddItem: (LogEntry) -> Unit
+    onAddItem: (FoodPreset) -> Unit,
+    onDeleteItem: ((FoodEntity) -> Unit)?
 ) {
-    var expandedCard by rememberSaveable { mutableStateOf(-1) }
+    var expandedId by rememberSaveable { mutableStateOf("") }
+    var deleteToggle by rememberSaveable { mutableStateOf(false) }
 
     if (foodList.isEmpty()) {
         Box (
@@ -117,11 +111,23 @@ fun FoodList(
             itemsIndexed(foodList) { index, entity ->
                 Spacer(modifier = Modifier.height(8.dp))
 
+                val id = entity.title + entity.imgRes
+
                 FoodCard(
                     foodEntity = entity,
-                    expanded = index == expandedCard,
-                    onSelected = { expandedCard = index },
-                    onAddItem = { onAddItem(it) }
+                    expanded = id == expandedId,
+                    onSelected = { expandedId = id },
+                    onAddItem = { unit, quantity ->
+                        expandedId = ""
+                        onAddItem(FoodPreset(entity, unit, quantity))
+                    },
+                    deleteToggle = deleteToggle,
+                    onDeleteItem = if (onDeleteItem == null) {
+                            null
+                        } else {{
+                            deleteToggle = !deleteToggle
+                            onDeleteItem(entity)
+                        }}
                 )
             }
 
@@ -147,8 +153,8 @@ fun FoodList(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
-                        onClick = { onChangePage(currentPage + 1) },
-                        enabled = currentPage != 1
+                        onClick = { onChangePage(currentPage - 1) },
+                        enabled = currentPage != 0
                     ) {
                         Text("Back")
                     }
@@ -163,13 +169,13 @@ fun FoodList(
                             color = Color.LightGray
                         )
                         Text(
-                            text = currentPage.toString(),
+                            text = (currentPage + 1).toString(),
                             fontSize = 20.sp
                         )
                     }
 
                     Button(
-                        onClick = { onChangePage(currentPage - 1) },
+                        onClick = { onChangePage(currentPage + 1) },
                         enabled = hasNextPage
                     ) {
                         Text("Next")
@@ -182,6 +188,7 @@ fun FoodList(
     }
 }
 
+@ExperimentalFoundationApi
 @ExperimentalAnimationApi
 @ExperimentalCoilApi
 @Composable
@@ -189,17 +196,21 @@ fun FoodCard(
     foodEntity: FoodEntity,
     expanded: Boolean,
     onSelected: () -> Unit,
-    onAddItem: (LogEntry) -> Unit
+    onAddItem: (Int, Float) -> Unit,
+    deleteToggle: Boolean,
+    onDeleteItem: (() -> Unit)?
 ) {
-    var showExtra by rememberSaveable { mutableStateOf(false) }
+    var highlighted by rememberSaveable(deleteToggle) { mutableStateOf(false) }
+    var showExtra by rememberSaveable(deleteToggle) { mutableStateOf(false) }
 
-    var selectedUnit by rememberSaveable { mutableStateOf(0) }
-    var quantity by rememberSaveable { mutableStateOf(1.0f) }
+    var selectedUnit by rememberSaveable(deleteToggle) { mutableStateOf(0) }
+    var quantity by rememberSaveable(deleteToggle) { mutableStateOf(1.0f) }
 
     val displayKcal = foodEntity.kcal[selectedUnit] * quantity
 
     Card(
         shape = RoundedCornerShape(bottomStart = 30.dp, topEnd = 45.dp),
+        backgroundColor = if (highlighted) Color.Red.copy(alpha = 0.15f) else Color.White,
         border = BorderStroke(
             width = 3.dp,
             brush = Brush.verticalGradient(
@@ -210,7 +221,20 @@ fun FoodCard(
         elevation = 8.dp,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onSelected() }
+            .combinedClickable(
+                onClick = {
+                    if (highlighted && onDeleteItem != null) {
+                        onDeleteItem()
+                    } else {
+                        onSelected()
+                    }
+                },
+                onLongClick = {
+                    if (onDeleteItem != null) {
+                        highlighted = !highlighted
+                    }
+                }
+            )
             .animateContentSize(
                 animationSpec = tween(
                     durationMillis = 150,
@@ -254,10 +278,9 @@ fun FoodCard(
                         quantity = quantity,
                         onUpdateQuantity = { quantity = it },
                         selectedUnit = selectedUnit,
+                        deleteToggle = deleteToggle,
                         onUpdateSelectedUnit = { selectedUnit = it },
-                        onDone = {
-                            onAddItem(LogEntry(foodEntity.title, displayKcal))
-                        }
+                        onDone = { onAddItem(selectedUnit, quantity) }
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -301,6 +324,7 @@ fun FoodCard(
                                 },
                             contentDescription = "Toggle Extra",
                             modifier = Modifier
+                                .padding(end = 12.dp)
                                 .weight(0.15f)
                                 .size(30.dp)
                                 .border(
@@ -442,13 +466,14 @@ fun PortionScaleRow(
     quantity: Float,
     onUpdateQuantity: (Float) -> Unit,
     selectedUnit: Int,
+    deleteToggle: Boolean,
     onUpdateSelectedUnit: (Int) -> Unit,
     onDone: () -> Unit
 ) {
-    var maximiseUnit by rememberSaveable { mutableStateOf(false) }
+    var maximiseUnit by rememberSaveable(deleteToggle) { mutableStateOf(false) }
 
-    var dragBuffer by rememberSaveable { mutableStateOf(0.0f) }
-    val dragDeadzone = 50.0f
+    var dragBuffer by rememberSaveable(deleteToggle) { mutableStateOf(0.0f) }
+    val dragDeadzone = 100.0f
 
     val portion = units[selectedUnit]
     val manyUnits = units.size > 1
@@ -456,9 +481,7 @@ fun PortionScaleRow(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceAround,
-        modifier = Modifier
-            .height(50.dp)
-            .fillMaxWidth()
+        modifier = Modifier.height(50.dp)
     ) {
         Surface(
             shape = RoundedCornerShape(10.dp),
@@ -469,12 +492,13 @@ fun PortionScaleRow(
                 .fillMaxHeight()
         ) {
             Box (
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.CenterStart
             ){
                 QuantityUnitField(
                     quantity = quantity,
                     unit = portion,
                     maximiseUnit = maximiseUnit,
+                    deleteToggle = deleteToggle,
                     onUpdate = onUpdateQuantity,
                     onDone = onDone
                 )
@@ -485,9 +509,9 @@ fun PortionScaleRow(
             color = Color.LightGray,
             shape = CircleShape,
             modifier = Modifier
-                .padding(4.dp)
                 .weight(0.2f)
-                .fillMaxHeight()
+                .padding(horizontal = 8.dp)
+                .size(45.dp)
                 .clickable(enabled = false) {}
                 .draggable(
                     startDragImmediately = true,
@@ -531,8 +555,7 @@ fun PortionScaleRow(
                     Icons.Filled.MoreHoriz
                 },
                 contentDescription = "Drag to cycle units",
-                modifier = Modifier
-                    .size(45.dp)
+                modifier = Modifier.fillMaxSize()
             )
         }
 
@@ -545,14 +568,15 @@ fun QuantityUnitField(
     quantity: Float,
     unit: String,
     maximiseUnit: Boolean,
+    deleteToggle: Boolean,
     onUpdate: (Float) -> Unit,
     onDone: () -> Unit
 ) {
     val rawText = quantity.toString()
-    var text by rememberSaveable { mutableStateOf(if (rawText == "1.0") "1" else rawText) }
+    var text by rememberSaveable(deleteToggle) { mutableStateOf(if (rawText == "1.0") "1" else rawText) }
 
-    var valid by rememberSaveable { mutableStateOf(true) }
-    var errorMessage by rememberSaveable { mutableStateOf("") }
+    var valid by rememberSaveable(deleteToggle) { mutableStateOf(true) }
+    var errorMessage by rememberSaveable(deleteToggle) { mutableStateOf("") }
 
     val focusManager = LocalFocusManager.current
 
@@ -568,58 +592,57 @@ fun QuantityUnitField(
         )
     }
 
-    BasicTextField(
-        value = text,
-        textStyle = style,
-        onValueChange = {
-            text = it
-
-            valid = try {
-                val _quantity = it.toFloat()
-
-                if (_quantity > 10_000) {
-                    throw IllegalArgumentException("Too Large")
-                }
-                if (_quantity <= 0) {
-                    throw IllegalArgumentException("Too Small")
-                }
-
-                onUpdate(_quantity)
-                errorMessage = ""
-                true
-
-            } catch (e: NumberFormatException) {
-                errorMessage = "Invalid"
-                false
-
-            } catch (e: IllegalArgumentException) {
-                errorMessage = e.message ?: ""
-                false
-            }
-        },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions.Default.copy(
-            keyboardType = KeyboardType.Number,
-            imeAction = ImeAction.Done
-        ),
-        keyboardActions = KeyboardActions(onDone = {
-            if (valid) {
-                focusManager.clearFocus()
-                onDone()
-            }
-        }),
-        decorationBox = { innerText ->
+    Row (
+        verticalAlignment = Alignment.CenterVertically,
+    ){
+        AnimatedVisibility(
+            visible = !maximiseUnit,
+            modifier = Modifier.weight(0.5f)
+        ) {
             Row (
-                verticalAlignment = Alignment.CenterVertically
-            ){
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BasicTextField(
+                    value = text,
+                    textStyle = style,
+                    onValueChange = {
+                        text = it
 
-                AnimatedVisibility(visible = !maximiseUnit) {
-                    Box(
-                        contentAlignment = Alignment.CenterStart,
-                        modifier = Modifier
-                            .weight(0.5f)
-                            .fillMaxHeight()
-                    ) {
+                        valid = try {
+                            val _quantity = it.toFloat()
+
+                            if (_quantity > 10_000) {
+                                throw IllegalArgumentException("Too Large")
+                            }
+                            if (_quantity <= 0) {
+                                throw IllegalArgumentException("Too Small")
+                            }
+
+                            onUpdate(_quantity)
+                            errorMessage = ""
+                            true
+
+                        } catch (e: NumberFormatException) {
+                            errorMessage = "Invalid"
+                            false
+
+                        } catch (e: IllegalArgumentException) {
+                            errorMessage = e.message ?: ""
+                            false
+                        }
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(onDone = {
+                        if (valid) {
+                            focusManager.clearFocus()
+                            onDone()
+                        }
+                    }),
+                    decorationBox = { innerText ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -641,30 +664,36 @@ fun QuantityUnitField(
                             )
 
                             innerText()
-
-                            Divider(
-                                modifier = Modifier
-                                    .width(2.dp)
-                                    .fillMaxHeight()
-                            )
                         }
-                    }
-                }
+                    },
+                    modifier = Modifier.weight(0.99f)
+                )
 
-                Text(
-                    text = if (errorMessage.isBlank()) unit else errorMessage,
-                    fontSize = 20.sp,
-                    textAlign = TextAlign.Center,
-                    overflow = TextOverflow.Ellipsis,
-                    maxLines = 1,
+                Divider(
+                    color = Color.LightGray,
                     modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .weight(0.5f)
-                        .fillMaxWidth()
+                        .weight(0.01f)
+                        .fillMaxHeight()
                 )
             }
         }
-    )
+
+
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.weight(0.5f)
+        ) {
+            Text(
+                text = if (errorMessage.isBlank()) unit else errorMessage,
+                fontSize = 20.sp,
+                textAlign = TextAlign.Center,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+            )
+        }
+    }
 }
 
 //@Preview(showBackground = true)
@@ -676,15 +705,23 @@ fun QuantityUnitField(
 //@ExperimentalAnimationApi
 //@Preview(showBackground = true)
 //@Composable
-//fun PreviewQuantityTextField() {
+//fun PreviewQuantityUnitField() {
 //    var maximiseUnit by remember { mutableStateOf(false) }
-//    Column {
-//        QuantityUnitField(
-//            unit = "A Very Long Unit Name",
-//            maximiseUnit = maximiseUnit,
-//            onDone = {}
-//        )
+//    var quantity by remember { mutableStateOf(1.0f) }
+//
+//    Column(modifier = Modifier.height(100.dp)) {
+//        Box(modifier = Modifier.height(50.dp)) {
+//            QuantityUnitField(
+//                quantity = quantity,
+//                unit = "A Very Long Unit Name",
+//                maximiseUnit = maximiseUnit,
+//                onUpdate = { quantity = it },
+//                onDone = {}
+//            )
+//        }
+//
 //        Spacer(modifier = Modifier.height(16.dp))
+//
 //        Button(onClick = { maximiseUnit = !maximiseUnit}) {
 //            Text("Flip")
 //        }
@@ -730,16 +767,18 @@ fun QuantityUnitField(
 //    )
 //}
 
-@ExperimentalCoilApi
-@ExperimentalAnimationApi
-@Preview(showBackground = true)
-@Composable
-fun PreviewFoodList() {
-    FoodList(
-        foodList = fakeSearchData,
-        hasNextPage = true,
-        currentPage = 0,
-        onChangePage = { Timber.i("Changing to page $it")},
-        onAddItem = { Timber.i("Adding item $it") }
-    )
-}
+//@ExperimentalCoilApi
+//@ExperimentalAnimationApi
+//@Preview(showBackground = true)
+//@Composable
+//fun PreviewFoodList() {
+//    FoodList(
+//        foodList = fakeSearchData,
+//        hasNextPage = true,
+//        currentPage = 0,
+//        onChangePage = { Timber.i("Changing to page $it")},
+//        onAddItem = { entity, unit, quantity ->
+//            Timber.i("Adding $quantity x $unit of ${entity.title}")
+//        }
+//    )
+//}

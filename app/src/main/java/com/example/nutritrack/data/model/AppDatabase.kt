@@ -11,15 +11,17 @@ import java.io.File
 @Database(
     entities = [
         LogsEntity::class,
-        FoodEntity::class
+        FoodEntity::class,
+        FavoritesEntity::class
     ],
-    version = 1,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun logsDAO(): LogsDAO
     abstract fun foodDAO(): FoodDAO
+    abstract fun favoritesDAO(): FavoritesDAO
 
     companion object {
         @Volatile
@@ -36,7 +38,9 @@ abstract class AppDatabase : RoomDatabase() {
                 context,
                 AppDatabase::class.java,
                 "NutriTrackDatabase"
-            ).build()
+            )
+            .fallbackToDestructiveMigration()
+            .build()
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.example.nutritrack.ui.screens
 
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement.SpaceEvenly
@@ -13,18 +15,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.annotation.ExperimentalCoilApi
+import com.example.nutritrack.data.model.FoodEntity
 import com.example.nutritrack.data.state.FavoritesViewState
 import com.example.nutritrack.data.state.SearchViewState
-import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.ui.theme.mealCategoryColors
-import com.example.nutritrack.util.LogEntry
+import com.example.nutritrack.util.FoodPreset
 import com.example.nutritrack.util.MealCategory
 import com.example.nutritrack.viewmodels.FavoritesViewModel
 import com.example.nutritrack.viewmodels.SearchViewModel
 
+@ExperimentalFoundationApi
+@ExperimentalCoilApi
+@ExperimentalAnimationApi
 @Composable
 fun FavoritesScreenContent(
     favoritesViewModel: FavoritesViewModel,
@@ -38,26 +43,25 @@ fun FavoritesScreenContent(
         searchState = searchState,
         loadedEntries = searchState.loadedEntries,
         onSelectCategory = favoritesViewModel::selectCategory,
-        onToggleUnitMenu = searchViewModel::toggleUnitMenu,
-        onSelectItem = searchViewModel::selectItem,
-        onUpdateQuantity = searchViewModel::updateDisplayStats,
-        onAddItem = { searchViewModel.copyLogEntry(it) }
+        onAddItem = { searchViewModel.copyLogEntry(it) },
+        onDeleteItem = favoritesViewModel::deleteFavorite
     )
 }
 
+@ExperimentalFoundationApi
+@ExperimentalCoilApi
+@ExperimentalAnimationApi
 @Composable
 fun FavoritesScreenHoist(
     favoritesState: FavoritesViewState,
     searchState: SearchViewState,
     loadedEntries: Int,
     onSelectCategory: (MealCategory?) -> Unit,
-    onSelectItem: (Int) -> Unit,
-    onUpdateQuantity: (Float) -> Unit,
-    onToggleUnitMenu: () -> Unit,
-    onAddItem: (LogEntry) -> Unit
+    onAddItem: (FoodPreset) -> Unit,
+    onDeleteItem: (MealCategory, FoodEntity) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar() {
+        TopAppBar {
             Box(
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -92,7 +96,7 @@ fun FavoritesScreenHoist(
 
         // Show all categories
         if (favoritesState.selectedCategory == null) {
-            val categories: MutableList<MealCategory?> = favoritesState.favorites.keys.toMutableList()
+            val categories: MutableList<MealCategory?> = MealCategory.values().toMutableList()
 
             if (categories.size % 2 != 0) {
                 categories += null
@@ -115,12 +119,14 @@ fun FavoritesScreenHoist(
                             cat1?.let {
                                 CategoryTile(
                                     category = it,
+                                    itemCount = favoritesState.categoryTotals.getOrElse(cat1) {0},
                                     onSelectCategory = onSelectCategory
                                 )
                             }
                             cat2?.let {
                                 CategoryTile(
                                     category = it,
+                                    itemCount = favoritesState.categoryTotals.getOrElse(cat2) {0},
                                     onSelectCategory = onSelectCategory
                                 )
                             }
@@ -129,15 +135,20 @@ fun FavoritesScreenHoist(
                 }
             }
         } else {
-            // Show items from that category
-//            FoodList(
-//                state = searchState,
-//                onSearch = {},
-//                onSelectItem = onSelectItem,
-//                onUpdateQuantity = onUpdateQuantity,
-//                onMoreUnits = onToggleUnitMenu,
-//                onAddItem = onAddItem
-//            )
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxSize()
+            ) {
+                FoodList(
+                    foodList = favoritesState.favorites,
+                    currentPage = 0,
+                    hasNextPage = false,
+                    onChangePage = {},
+                    onAddItem = onAddItem,
+                    onDeleteItem = { onDeleteItem(favoritesState.selectedCategory, it) }
+                )
+            }
         }
     }
 }
@@ -145,10 +156,11 @@ fun FavoritesScreenHoist(
 @Composable
 fun CategoryTile(
     category: MealCategory,
+    itemCount: Int,
     onSelectCategory: (MealCategory) -> Unit
 ) {
     Surface(
-        color = mealCategoryColors[category] ?: Color.Gray,
+        color = mealCategoryColors[category]?.copy(alpha = 0.75f) ?: Color.Gray,
         shape = RoundedCornerShape(10.dp),
         elevation = 5.dp,
         modifier = Modifier
@@ -156,13 +168,26 @@ fun CategoryTile(
             .clickable { onSelectCategory(category) }
     ) {
         Box {
-            Text(
-                text = category.name,
-                fontSize = 22.sp,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.align(Alignment.Center)
-            )
+            ){
+                Text(
+                    text = category.name,
+                    fontSize = 22.sp,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(25.dp))
+
+                Text(
+                    text = itemCount.toString(),
+                    fontSize = 25.sp,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }

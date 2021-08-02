@@ -3,18 +3,15 @@ package com.example.nutritrack.data.model
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.example.nutritrack.util.MealCategory
 
-@Entity(tableName = "food")
+@Entity(
+    tableName = "food",
+    primaryKeys = ["title", "img_res"]
+)
 data class FoodEntity(
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id") val id: Long = 0,
+    @ColumnInfo(name = "title") val title: String,
 
-    @ColumnInfo(name = "title") val title: String = "Missing Entry",
-
-    @ColumnInfo(name = "img_res") val imgRes: String? = null,
-
-    @ColumnInfo(name = "category") val category: MealCategory? = null,
+    @ColumnInfo(name = "img_res") val imgRes: String,
 
     @ColumnInfo(name = "portions_list") val portions: List<String> = emptyList(),
 

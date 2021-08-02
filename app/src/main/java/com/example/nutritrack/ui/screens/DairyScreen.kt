@@ -30,24 +30,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nutritrack.data.state.DiaryViewState
 import com.example.nutritrack.data.model.LogsEntity
-import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.ui.theme.mealCategoryColors
+import com.example.nutritrack.util.FoodPreset
 import com.example.nutritrack.util.LogEntry
 import com.example.nutritrack.util.MILLIS_IN_DAY
 import com.example.nutritrack.util.MealCategory
 import com.example.nutritrack.viewmodels.DiaryViewModel
+import com.example.nutritrack.viewmodels.FavoritesViewModel
 import com.example.nutritrack.viewmodels.SearchViewModel
 
 @ExperimentalFoundationApi
 @Composable
 fun DiaryScreenContent(
     diaryViewModel: DiaryViewModel,
-    searchViewModel: SearchViewModel
+    searchViewModel: SearchViewModel,
+    favoritesViewModel: FavoritesViewModel
 ) {
     val diaryState by diaryViewModel.viewState.collectAsState()
     val searchState by searchViewModel.viewState.collectAsState()
@@ -62,19 +63,23 @@ fun DiaryScreenContent(
             if (entries.isEmpty()) {
                 diaryViewModel.toggleQuickAddMenu(category)
             } else {
-                entries.forEach { (title, kcal) ->
+                favoritesViewModel.addFavorites(
+                    category = category,
+                    entities = entries.map{ (e, _, _) -> e }
+                )
+
+                entries.forEach { (entity, unit, quantity) ->
                     diaryViewModel.updateLog(
                         entity = LogsEntity(
                             category = category,
-                            title = title,
-                            kcal = kcal,
+                            title = entity.title,
+                            kcal = entity.kcal[unit] * quantity,
                             date = diaryState.displayDate
                         ),
                         add = true
                     )
                 }
             }
-            // diaryViewModel.addLogEntry(it, Pair("Testing", 500.0f))
         },
         onQuickAddEntry = { entry ->
             diaryState.selectedCategory?.let { category ->

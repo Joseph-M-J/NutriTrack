@@ -4,8 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nutritrack.data.FoodRepository
 import com.example.nutritrack.data.state.SearchViewState
-import com.example.nutritrack.util.LogEntry
-import com.example.nutritrack.util.RemoteResource
+import com.example.nutritrack.util.FoodPreset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,32 +20,7 @@ class SearchViewModel(private val repo: FoodRepository) : ViewModel() {
     private var _previousQuery: String? = null
     private var _fetchJob: Job? = null
 
-    private var _loadedEntries = mutableListOf<LogEntry>()
-
-    fun selectItem(foodItem: Int) {
-        if (_viewState.value.selectedItem != foodItem) {
-            _viewState.value = _viewState.value.copy(
-                selectedItem = foodItem,
-                selectedUnit = 0,
-                quantity = 1.0f
-            )
-            updateDisplayStats(1.0f)
-        }
-    }
-
-    fun selectUnit(foodUnit: Int) {
-        _viewState.value = _viewState.value.copy(
-            selectedUnit = foodUnit,
-            quantity = 1.0f
-        )
-        updateDisplayStats(_viewState.value.quantity)
-    }
-
-    fun toggleUnitMenu() {
-        _viewState.value = _viewState.value.copy(
-            showUnitMenu = !_viewState.value.showUnitMenu
-        )
-    }
+    private var _loadedEntries = mutableListOf<FoodPreset>()
 
     fun fetchFoodList(query: String?, page: Int, force: Boolean = false) {
         val newQuery = query ?: _previousQuery
@@ -62,8 +36,6 @@ class SearchViewModel(private val repo: FoodRepository) : ViewModel() {
             _fetchJob = viewModelScope.launch(Dispatchers.Default) {
                 repo.fetchFoodList(newQuery, page).collect { (results, hasNext) ->
                     _viewState.value = _viewState.value.copy(
-                        selectedUnit = 0,
-                        selectedItem = -1,
                         currentPage = page,
                         hasNextPage = hasNext,
                         searchResults = results
@@ -73,35 +45,14 @@ class SearchViewModel(private val repo: FoodRepository) : ViewModel() {
         }
     }
 
-    fun updateDisplayStats(quantity: Float) {
-        val searchResults = _viewState.value.searchResults
-
-        if (searchResults !is RemoteResource.Success) return
-
-        val foodInfo = searchResults
-            .data.getOrNull(_viewState.value.selectedItem) ?: return
-
-        val unit = _viewState.value.selectedUnit
-
-        _viewState.value = _viewState.value.copy(
-            quantity = quantity,
-            displayStats = listOf(
-                foodInfo.kcal[unit],
-                foodInfo.protein[unit],
-                foodInfo.carbs[unit],
-                foodInfo.fat[unit]
-            ).map { it * quantity }
-        )
-    }
-
-    fun copyLogEntry(entry: LogEntry) {
+    fun copyLogEntry(entry: FoodPreset) {
         _loadedEntries.add(entry)
         _viewState.value = _viewState.value.copy(
             loadedEntries = _loadedEntries.size
         )
     }
 
-    fun pasteLogEntry(): List<LogEntry> {
+    fun pasteLogEntry(): List<FoodPreset> {
         val entry = listOf(*_loadedEntries.toTypedArray())
         _loadedEntries.clear()
         _viewState.value = _viewState.value.copy(

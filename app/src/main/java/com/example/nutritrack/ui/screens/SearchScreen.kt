@@ -1,6 +1,7 @@
 package com.example.nutritrack.ui.screens
 
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -21,12 +22,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.annotation.ExperimentalCoilApi
-import com.example.nutritrack.api.NutracheckService
 import com.example.nutritrack.data.state.SearchViewState
-import com.example.nutritrack.util.LogEntry
+import com.example.nutritrack.util.FoodPreset
 import com.example.nutritrack.util.RemoteResource
 import com.example.nutritrack.viewmodels.SearchViewModel
 
+@ExperimentalFoundationApi
 @ExperimentalCoilApi
 @ExperimentalAnimationApi
 @Composable
@@ -42,16 +43,15 @@ fun SearchScreenContent(
     )
 }
 
+@ExperimentalFoundationApi
 @ExperimentalCoilApi
 @ExperimentalAnimationApi
 @Composable
 fun SearchScreenHoist(
     state: SearchViewState,
     onSearch: (String?, Int, Boolean) -> Unit,
-    onAddItem: (LogEntry) -> Unit
+    onAddItem: (FoodPreset) -> Unit
 ) {
-    var currentPage by rememberSaveable { mutableStateOf(NutracheckService.FIRST_PAGE) }
-
     val searchResults = state.searchResults
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -66,7 +66,7 @@ fun SearchScreenHoist(
                 )
 
                 SearchBar(
-                    onSearch = { onSearch(it, NutracheckService.FIRST_PAGE, false) },
+                    onSearch = { onSearch(it, 0, false) },
                     modifier = Modifier
                         .padding(vertical = 8.dp)
                         .fillMaxWidth(0.65f)
@@ -120,12 +120,12 @@ fun SearchScreenHoist(
                     FoodList(
                         foodList = searchResults.data,
                         hasNextPage = state.hasNextPage,
-                        currentPage = currentPage,
+                        currentPage = state.currentPage,
                         onChangePage = {
-                            currentPage = it
                             onSearch(null, it, true)
                         },
-                        onAddItem = onAddItem
+                        onAddItem = onAddItem,
+                        onDeleteItem = null
                     )
                 }
             }
