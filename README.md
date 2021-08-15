@@ -56,6 +56,8 @@ Composables and previews.
 
 Composable recomposition (mutableStateOf to watch for data changes)
 
+cold vs hot flows.
+
 Stateful composables for modularity and testability with rememberSaveable.
 
 State hoisting in composables for testability.
