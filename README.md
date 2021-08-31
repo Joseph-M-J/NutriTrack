@@ -24,11 +24,7 @@ This is a simple calorie tracking Android app that I built for myself and my fam
     - String parsing, CSS selectors, HTML, the DOM, tags, classes.
 - Data persistence with the AndroidX Room database library.
     
-    - Annotations:
-        
-        ```kotlin
-        @Entity, @Dao, @Database, @TypeConverters, @Embedded, @Query, @Insert, @Delete
-        ```
+    - Annotations: `@Entity`, `@Dao`, `@Database`, `@TypeConverters`, `@Embedded`, `@Query`, `@Insert`, `@Delete`
         
     - SQL queries, primary keys, composite keys, foreign keys (cascade delete)
         
@@ -90,3 +86,10 @@ This is a simple calorie tracking Android app that I built for myself and my fam
 - Text input widgets and form validation:
     
     - On value change hooks
+
+## Future Extensions
+
+In the future I may:
+
+1.  Implement user profiles, for weight tracking and calorie goals.
+2.  Recreate this Android app as a progressive web application.
